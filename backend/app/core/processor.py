@@ -73,9 +73,9 @@ class TransactionProcessor:
                     logger.error(f"Heartbeat error: {str(e)}")
                     time.sleep(10)  # Shorter interval for retry
         
-        #self.heartbeat_thread = threading.Thread(target=heartbeat_worker, daemon=True)
-        #self.heartbeat_thread.start()
-        #logger.info("Heartbeat monitoring thread started")
+        self.heartbeat_thread = threading.Thread(target=heartbeat_worker, daemon=True)
+        self.heartbeat_thread.start()
+        logger.info("Heartbeat monitoring thread started")
     
     def _start_offline_sync_thread(self) -> None:
         """Start the offline transaction synchronization thread"""
