@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Black Rock Payment Terminal</title>
+    <link rel="stylesheet" href="styles.css">
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
+</head>
+<body>
+    <div class="terminal-container">
+        <header>
+            <div class="logo">
+                <h1>Black Rock</h1>
+                <span class="subtitle">Payment Terminal</span>
+            </div>
+            <div class="status-indicator">
+                <span id="status-text">ONLINE</span>
+                <div id="status-light" class="status-light online"></div>
+            </div>
+        </header>
+        
+        <div class="main-content">
+            <div class="payment-form">
+                <h2>Process Payment</h2>
+                
+                <div class="form-group">
+                    <label for="amount">Amount</label>
+                    <div class="input-with-icon">
+                        <span class="currency-symbol">$</span>
+                        <input type="number" id="amount" step="0.01" min="0.01" placeholder="0.00">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="currency">Currency</label>
+                    <select id="currency">
+                        <option value="USD">USD - US Dollar</option>
+                        <option value="EUR">EUR - Euro</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="card-number">Card Number</label>
+                    <input type="text" id="card-number" placeholder="XXXX XXXX XXXX XXXX">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label for="expiry">Expiry Date</label>
+                        <input type="text" id="expiry" placeholder="MM/YY">
+                    </div>
+                    <div class="form-group half">
+                        <label for="cvv">CVV</label>
+                        <input type="text" id="cvv" placeholder="XXX">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="cardholder">Cardholder Name</label>
+                    <input type="text" id="cardholder" placeholder="Name on card">
+                </div>
+                
+                <div class="form-group">
+                    <label for="postal-code">Postal/ZIP Code</label>
+                    <input type="text" id="postal-code" placeholder="Optional">
+                </div>
+                
+                <div class="form-group">
+                    <label for="protocol">Protocol</label>
+                    <select id="protocol">
+                        <option value="POS Terminal -101.1 (4-digit approval)">POS Terminal -101.1 (4-digit approval)</option>
+                        <option value="POS Terminal -101.4 (6-digit approval)">POS Terminal -101.4 (6-digit approval)</option>
+                        <option value="POS Terminal -101.6 (Pre-authorization)">POS Terminal -101.6 (Pre-authorization)</option>
+                        <option value="POS Terminal -101.7 (4-digit approval)">POS Terminal -101.7 (4-digit approval)</option>
+                        <option value="POS Terminal -101.8 (PIN-LESS transaction)">POS Terminal -101.8 (PIN-LESS transaction)</option>
+                        <option value="POS Terminal -201.1 (6-digit approval)">POS Terminal -201.1 (6-digit approval)</option>
+                        <option value="POS Terminal -201.3 (6-digit approval)">POS Terminal -201.3 (6-digit approval)</option>
+                        <option value="POS Terminal -201.5 (6-digit approval)">POS Terminal -201.5 (6-digit approval)</option>
+                    </select>
+                </div>
+                
+                <!-- New Auth Code field -->
+                <div class="form-group" id="auth-code-container">
+                    <label for="auth-code">Auth Code</label>
+                    <input type="text" id="auth-code" placeholder="Enter auth code">
+                    <span class="auth-code-hint">Required for this protocol</span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="transaction-type">Transaction Type</label>
+                    <select id="transaction-type">
+                        <option value="SALE">Sale</option>
+                        <option value="REFUND">Refund</option>
+                        <option value="PRE_AUTH">Pre-Authorization</option>
+                        <option value="PRE_AUTH_COMPLETION">Pre-Auth Completion</option>
+                        <option value="BALANCE_INQUIRY">Balance Inquiry</option>
+                    </select>
+                </div>
+                
+                <div class="button-group">
+                    <button id="process-btn" class="primary-btn">Process Payment</button>
+                    <button id="clear-btn" class="secondary-btn">Clear</button>
+                </div>
+            </div>
+            
+            <div class="transaction-result" id="transaction-result">
+                <h2>Transaction Result</h2>
+                <div class="result-content" id="result-content">
+                    <p class="placeholder-text">Transaction results will appear here</p>
+                </div>
+                <div class="button-group">
+                    <button id="print-btn" class="secondary-btn" disabled>Print Receipt</button>
+                    <button id="void-btn" class="danger-btn" disabled>Void Transaction</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- New Payout Settings Section -->
+        <div class="payout-settings">
+            <h2>Payout Settings</h2>
+            <div class="payout-tabs">
+                <button class="payout-tab active" data-tab="bank">Bank Account</button>
+                <button class="payout-tab" data-tab="crypto">Cryptocurrency</button>
+            </div>
+            
+            <div class="payout-content active" id="bank-payout">
+                <div class="form-group">
+                    <label for="bank-name">Bank Name</label>
+                    <input type="text" id="bank-name" placeholder="Enter bank name">
+                </div>
+                <div class="form-group">
+                    <label for="account-name">Account Name</label>
+                    <input type="text" id="account-name" placeholder="Enter account name">
+                </div>
+                <div class="form-group">
+                    <label for="account-number">Account Number</label>
+                    <input type="text" id="account-number" placeholder="Enter account number">
+                </div>
+                <div class="form-group">
+                    <label for="routing-number">Routing Number</label>
+                    <input type="text" id="routing-number" placeholder="Enter routing number">
+                </div>
+                <div class="form-group">
+                    <label for="swift-code">SWIFT Code (International)</label>
+                    <input type="text" id="swift-code" placeholder="Optional">
+                </div>
+                <div class="form-group">
+                    <label for="iban">IBAN (International)</label>
+                    <input type="text" id="iban" placeholder="Optional">
+                </div>
+                <div class="button-group">
+                    <button id="save-bank-btn" class="primary-btn">Save Bank Details</button>
+                </div>
+            </div>
+            
+            <div class="payout-content" id="crypto-payout">
+                <div class="form-group">
+                    <label for="crypto-currency">Cryptocurrency</label>
+                    <select id="crypto-currency">
+                        <option value="BTC">Bitcoin (BTC)</option>
+                        <option value="ETH">Ethereum (ETH)</option>
+                        <option value="USDT">Tether (USDT)</option>
+                        <option value="USDC">USD Coin (USDC)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="wallet-address">Wallet Address</label>
+                    <input type="text" id="wallet-address" placeholder="Enter wallet address">
+                </div>
+                <div class="form-group">
+                    <label for="network">Network (for tokens)</label>
+                    <select id="network">
+                        <option value="">Not Applicable</option>
+                        <option value="ETH">Ethereum</option>
+                        <option value="BSC">Binance Smart Chain</option>
+                        <option value="POLYGON">Polygon</option>
+                        <option value="ARBITRUM">Arbitrum</option>
+                    </select>
+                </div>
+                <div class="button-group">
+                    <button id="save-crypto-btn" class="primary-btn">Save Crypto Details</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="transaction-history">
+            <h2>Recent Transactions</h2>
+            <div class="history-table-container">
+                <table id="history-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-body">
+                        <tr class="placeholder-row">
+                            <td colspan="5">No transactions yet</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <footer>
+            <div class="terminal-info">
+                <span>Terminal ID: <span id="terminal-id">--</span></span>
+                <span>Merchant ID: <span id="merchant-id">--</span></span>
+            </div>
+            <div class="version-info">
+                <span>Black Rock Payment Terminal v1.0</span>
+            </div>
+        </footer>
+    </div>
+    
+    <!-- Receipt Modal -->
+    <div class="modal" id="receipt-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Receipt</h2>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="receipt-container"></div>
+            </div>
+            <div class="modal-footer">
+                <button id="print-receipt-btn" class="primary-btn">Print</button>
+                <button id="close-receipt-btn" class="secondary-btn">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
