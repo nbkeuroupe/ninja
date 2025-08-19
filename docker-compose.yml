@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: black-rock-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - MERCHANT_ID=DEFAULT_MERCHANT
+      - TERMINAL_ID=DEFAULT_TERMINAL
+      - SERVER_URL=http://localhost:8001
+      - DATABASE_URL=sqlite:///./black_rock_terminal.db
+    volumes:
+      - ./backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - black-rock-network
+
+  web:
+    image: nginx:alpine
+    container_name: black-rock-web
+    ports:
+      - "80:80"
+    volumes:
+      - ./frontend/web/public:/usr/share/nginx/html
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - backend
+    networks:
+      - black-rock-network
+
+networks:
+  black-rock-network:
+    driver: bridge
