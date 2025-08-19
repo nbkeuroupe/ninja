@@ -1,0 +1,15 @@
+{
+  "name": "black-rock-payment-terminal-web",
+  "version": "1.0.0",
+  "description": "Web frontend for Black Rock Payment Terminal",
+  "main": "public/index.html",
+  "scripts": {
+    "start": "serve -s public",
+    "test": "echo &quot;Error: no test specified&quot; && exit 1"
+  },
+  "author": "NinjaTech AI",
+  "license": "MIT",
+  "dependencies": {
+    "serve": "^14.2.0"
+  }
+}
