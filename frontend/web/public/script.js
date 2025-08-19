@@ -109,11 +109,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 `Enter ${protocolConfig.approval_length}-digit code` : 
                 `Enter ${protocolConfig.approval_length}-character code`;
             authCodeInput.placeholder = placeholder;
+        } else {
+            // Hide auth code field if no protocol config
+            authCodeContainer.style.display = 'none';
+            authCodeHint.style.display = 'none';
         }
     }
     
     // Initialize auth code field
-    updateAuthCodeRequirements();
+    // Set auth code container to display based on initial protocol selection
+    const initialProtocol = protocolSelect.value;
+    const initialProtocolConfig = PROTOCOLS[initialProtocol];
+    
+    if (initialProtocolConfig) {
+        authCodeContainer.style.display = 'block';
+        authCodeHint.style.display = 'block';
+        authCodeHint.textContent = `Required: ${initialProtocolConfig.approval_length} ${initialProtocolConfig.is_onledger ? 'digits' : 'alphanumeric characters'}`;
+    }
     
     // Auth code input validation
     authCodeInput.addEventListener('input', function(e) {
@@ -124,7 +136,8 @@ document.addEventListener('DOMContentLoaded', function() {
             let value = e.target.value;
             
             // For numeric protocols, restrict to digits
-            if (selectedProtocol.startsWith('POS Terminal -101')) {
+            // Check if protocol requires numeric auth code based on is_onledger property
+            if (protocolConfig.is_onledger) {
                 value = value.replace(/\D/g, '');
             }
             
@@ -245,7 +258,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // For numeric protocols, check if auth code is numeric
-            if (selectedProtocol.startsWith('POS Terminal -101') && !/^\d+$/.test(authCodeInput.value)) {
+            // Check if protocol requires numeric auth code based on is_onledger property
+            if (protocolConfig.is_onledger && !/^\d+$/.test(authCodeInput.value)) {
                 displayError('Auth code must be numeric for this protocol');
                 return false;
             }
