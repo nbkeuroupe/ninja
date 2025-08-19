@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Black Rock Payment Terminal</title>
     <link rel="stylesheet" href="styles.css">
-<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
+    <script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
 </head>
 <body>
     <div class="terminal-container">
@@ -80,11 +80,13 @@
                     </select>
                 </div>
                 
-                <!-- New Auth Code field -->
+                <!-- Fixed Auth Code field -->
                 <div class="form-group" id="auth-code-container">
                     <label for="auth-code">Auth Code</label>
-                    <input type="text" id="auth-code" placeholder="Enter auth code">
-                    <span class="auth-code-hint">Required for this protocol</span>
+                    <input type="text" id="auth-code" name="authCode" placeholder="Enter auth code" 
+                           inputmode="numeric" required pattern="^\d{4}$" maxlength="4"
+                           aria-describedby="auth-code-hint">
+                    <small id="auth-code-hint" class="auth-code-hint">Required: 4 digits</small>
                 </div>
                 
                 <div class="form-group">
@@ -116,7 +118,7 @@
             </div>
         </div>
         
-        <!-- New Payout Settings Section -->
+        <!-- Payout Settings -->
         <div class="payout-settings">
             <h2>Payout Settings</h2>
             <div class="payout-tabs">
@@ -234,6 +236,40 @@
         </div>
     </div>
     
+    <script>
+      (function () {
+        const proto = document.getElementById('protocol');
+        const auth  = document.getElementById('auth-code');
+        const hint  = document.getElementById('auth-code-hint');
+
+        function applyLen(len) {
+          auth.value = auth.value.replace(/\D/g, '').slice(0, len);
+          auth.setAttribute('pattern', `^\\d{${len}}$`);
+          auth.setAttribute('maxlength', len);
+          hint.textContent = `Required: ${len} digits`;
+          auth.setCustomValidity('');
+        }
+
+        function initFromSelect() {
+          const selected = proto.value;
+          let len = 4;
+          if (selected.includes('6-digit')) len = 6;
+          applyLen(len);
+        }
+
+        initFromSelect();
+        proto.addEventListener('change', initFromSelect);
+
+        auth.addEventListener('input', () => {
+          auth.value = auth.value.replace(/\D/g, '');
+        });
+
+        auth.addEventListener('invalid', () => {
+          auth.setCustomValidity(`Please enter exactly ${auth.maxLength} digits`);
+        });
+      })();
+    </script>
+
     <script src="script.js"></script>
 </body>
 </html>
