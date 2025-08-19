@@ -106,6 +106,13 @@ frontend/android/.gradle/
 frontend/android/build/
 
 
+# Frontend ignores
+frontend/web/node_modules/
+frontend/package-lock.json
+frontend/android/.gradle/
+frontend/android/build/
+
+
 # Frontend node modules
 frontend/web/node_modules/
 frontend/android/node_modules/
@@ -120,7 +127,6 @@ frontend/web/build/
 frontend/web/.next/
 frontend/web/dist/
 frontend/android/build/
-
 
 
 
