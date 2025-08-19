@@ -118,7 +118,6 @@ pyiso8583
 PyJWT
 pyotp
 pyparsing
-pypi
 pypng
 pyproject-toml
 pytest
@@ -127,7 +126,6 @@ python-engineio
 python-multipart
 python-socketio
 pyunormalize
-pywin32
 PyYAML
 qrcode
 referencing
