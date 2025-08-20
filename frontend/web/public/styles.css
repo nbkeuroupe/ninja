@@ -1,238 +1,264 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Black Rock Payment Terminal</title>
-    <!-- Use the Inter font from Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <!-- Link to the external stylesheet -->
-    <link rel="stylesheet" href="styles.css">
-    <!-- Load Tailwind CSS from CDN for styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="flex items-center justify-center min-h-screen p-4">
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f3f4f6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+.terminal-container {
+    max-width: 900px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 5px 10px -5px rgba(0, 0, 0, 0.04);
+    border-radius: 1.5rem;
+    display: grid;
+    grid-template-areas: "header header" "main main" "payout history" "footer footer";
+    gap: 1.5rem;
+    padding: 1.5rem;
+}
+.terminal-container > header { grid-area: header; }
+.terminal-container > .main-content { grid-area: main; display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+.terminal-container > .payout-settings { grid-area: payout; }
+.terminal-container > .transaction-history { grid-area: history; }
+.terminal-container > footer { grid-area: footer; }
 
-    <!-- Login Section - Initial view -->
-    <div id="login-section" class="terminal-container bg-white p-6 rounded-3xl w-full">
-        <h1 class="text-center text-3xl font-bold text-gray-800 mb-6">Terminal Login</h1>
-        <p class="text-center text-gray-600 mb-6">Enter your credentials to access the terminal.</p>
-        <div class="form-group">
-            <label for="merchant-id-input">Merchant ID</label>
-            <input type="text" id="merchant-id-input" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter Merchant ID">
-        </div>
-        <div class="form-group mt-4">
-            <label for="terminal-id-input">Terminal ID</label>
-            <input type="text" id="terminal-id-input" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter Terminal ID">
-        </div>
-        <div class="button-group justify-center">
-            <button id="login-btn" class="primary-btn w-full">Login</button>
-        </div>
-        <div id="login-message" class="text-center mt-4 text-sm text-red-500"></div>
-    </div>
-    
-    <!-- Main Terminal View - Initially hidden -->
-    <div id="main-terminal-view" class="terminal-container bg-white p-6 rounded-3xl w-full hidden">
-        <header class="flex justify-between items-center mb-6">
-            <div class="logo">
-                <h1 class="text-2xl font-bold text-gray-800">Black Rock</h1>
-                <span class="text-sm text-gray-500">Payment Terminal</span>
-            </div>
-            <div class="status-indicator">
-                <span id="status-text" class="font-medium text-gray-600">OFFLINE</span>
-                <div id="status-light" class="status-light offline"></div>
-            </div>
-        </header>
-        
-        <div class="main-content">
-            <div class="payment-form">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">Process Payment</h2>
-                
-                <div class="form-group">
-                    <label for="amount">Amount</label>
-                    <div class="input-with-icon">
-                        <span class="currency-symbol">$</span>
-                        <input type="number" id="amount" step="0.01" min="0.01" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0.00">
-                    </div>
-                </div>
-                
-                <div class="form-group mt-4">
-                    <label for="currency">Currency</label>
-                    <select id="currency" class="w-full px-4 py-2 border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="USD">USD - US Dollar</option>
-                        <option value="EUR">EUR - Euro</option>
-                    </select>
-                </div>
-                
-                <div class="form-group mt-4">
-                    <label for="card-number">Card Number</label>
-                    <input type="text" id="card-number" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="XXXX XXXX XXXX XXXX">
-                </div>
-                
-                <div class="form-row mt-4">
-                    <div class="form-group">
-                        <label for="expiry">Expiry Date</label>
-                        <input type="text" id="expiry" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="MM/YY">
-                    </div>
-                    <div class="form-group">
-                        <label for="cvv">CVV</label>
-                        <input type="text" id="cvv" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="XXX">
-                    </div>
-                </div>
-                
-                <div class="form-group mt-4">
-                    <label for="cardholder">Cardholder Name</label>
-                    <input type="text" id="cardholder" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Name on card">
-                </div>
-                
-                <div class="form-group mt-4">
-                    <label for="protocol">Protocol</label>
-                    <select id="protocol" class="w-full px-4 py-2 border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="">Select a Protocol</option>
-                        <option value="101.1">POS Terminal -101.1 (4-digit approval)</option>
-                        <option value="101.4">POS Terminal -101.4 (6-digit approval)</option>
-                        <option value="101.6">POS Terminal -101.6 (Pre-authorization)</option>
-                        <option value="101.7">POS Terminal -101.7 (4-digit approval)</option>
-                        <option value="101.8">POS Terminal -101.8 (PIN-LESS transaction)</option>
-                        <option value="201.1">POS Terminal -201.1 (6-digit approval)</option>
-                    </select>
-                </div>
-                
-                <!-- New Auth Code field - Hidden by default -->
-                <div class="form-group mt-4" id="auth-code-container" style="display: none;">
-                    <label for="auth-code">Auth Code</label>
-                    <input type="text" id="auth-code" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter auth code">
-                    <span class="auth-code-hint text-xs mt-1 text-gray-500">Required for this protocol</span>
-                </div>
+/* New grid for MTI stream on desktop */
+@media (min-width: 768px) {
+    .terminal-container {
+        grid-template-areas: "header header" "main mti-stream" "payout history" "footer footer";
+        grid-template-columns: 1fr 1fr;
+    }
+    .terminal-container > .mti-stream { grid-area: mti-stream; }
+}
 
-                <div class="button-group mt-6">
-                    <button id="process-btn" class="primary-btn w-full">Process Payment</button>
-                    <button id="clear-btn" class="secondary-btn w-full">Clear</button>
-                </div>
-            </div>
-            
-            <div class="transaction-result bg-gray-50 rounded-xl p-6">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">Transaction Result</h2>
-                <div class="result-content bg-gray-200 rounded-lg p-4 mb-4 min-h-[100px] flex items-center justify-center">
-                    <p class="placeholder-text text-gray-500 italic">Transaction results will appear here</p>
-                </div>
-                <div class="button-group">
-                    <button id="print-btn" class="secondary-btn w-1/2" disabled>Print Receipt</button>
-                    <button id="void-btn" class="danger-btn w-1/2" disabled>Void Transaction</button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Payout Settings and History Section -->
-        <div class="payout-settings bg-white rounded-3xl p-6 border border-gray-200">
-            <h2 class="text-xl font-bold text-gray-800 mb-4">Payout Settings</h2>
-            <div class="payout-tabs flex mb-4 border-b border-gray-200">
-                <button class="payout-tab px-4 py-2 font-medium text-gray-600 hover:text-blue-600 border-b-2 border-transparent transition-colors duration-200 active-tab">Bank Account</button>
-                <button class="payout-tab px-4 py-2 font-medium text-gray-600 hover:text-blue-600 border-b-2 border-transparent transition-colors duration-200">Cryptocurrency</button>
-            </div>
-            
-            <div class="payout-content bank-content">
-                <div class="form-group mt-4">
-                    <label for="bank-name">Bank Name</label>
-                    <input type="text" id="bank-name" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter bank name">
-                </div>
-                <div class="form-group mt-4">
-                    <label for="account-name">Account Name</label>
-                    <input type="text" id="account-name" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter account name">
-                </div>
-                <div class="form-group mt-4">
-                    <label for="account-number">Account Number</label>
-                    <input type="text" id="account-number" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter account number">
-                </div>
-                <div class="form-group mt-4">
-                    <label for="routing-number">Routing Number</label>
-                    <input type="text" id="routing-number" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter routing number">
-                </div>
-                <div class="button-group">
-                    <button id="save-bank-btn" class="primary-btn">Save Bank Details</button>
-                </div>
-            </div>
-            
-            <div class="payout-content crypto-content hidden">
-                <div class="form-group mt-4">
-                    <label for="crypto-currency">Cryptocurrency</label>
-                    <select id="crypto-currency" class="w-full px-4 py-2 border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="BTC">Bitcoin (BTC)</option>
-                        <option value="ETH">Ethereum (ETH)</option>
-                        <option value="USDT">Tether (USDT)</option>
-                    </select>
-                </div>
-                <div class="form-group mt-4">
-                    <label for="wallet-address">Wallet Address</label>
-                    <input type="text" id="wallet-address" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter wallet address">
-                </div>
-                <div class="button-group">
-                    <button id="save-crypto-btn" class="primary-btn">Save Crypto Details</button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- New MTI Stream Section -->
-        <div class="mti-stream bg-gray-900 text-gray-200 rounded-3xl p-6 border border-gray-700 md:col-span-2 md:row-start-2 md:row-end-3 hidden">
-            <h2 class="text-xl font-bold text-gray-100 mb-4">Real-time MTI Stream</h2>
-            <div id="mti-stream-container" class="mti-stream-container">
-                <p class="text-gray-500 italic text-center">Waiting for messages...</p>
-            </div>
-        </div>
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.status-light {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 0 0 2px #d1d5db; /* gray-300 */
+}
+.status-light.online { background-color: #10b981; } /* green-500 */
+.status-light.offline { background-color: #f87171; } /* red-400 */
+.status-light.pending { background-color: #fcd34d; } /* amber-300 */
 
-        <div class="transaction-history bg-white rounded-3xl p-6 border border-gray-200">
-            <h2 class="text-xl font-bold text-gray-800 mb-4">Recent Transactions</h2>
-            <div class="history-table-container">
-                <table id="history-table" class="w-full">
-                    <thead>
-                        <tr class="text-xs text-gray-500 uppercase">
-                            <th class="py-2 px-4">Time</th>
-                            <th class="py-2 px-4">Type</th>
-                            <th class="py-2 px-4">Amount</th>
-                            <th class="py-2 px-4">Status</th>
-                            <th class="py-2 px-4">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="history-body">
-                        <tr class="placeholder-row">
-                            <td colspan="5" class="py-4 text-center text-gray-400 italic">No transactions yet</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        
-        <footer class="flex justify-between items-center text-xs text-gray-500 mt-4">
-            <div class="terminal-info">
-                <span>Terminal ID: <span id="terminal-id" class="font-bold text-gray-700">--</span></span>
-                <span class="mx-2">|</span>
-                <span>Merchant ID: <span id="merchant-id" class="font-bold text-gray-700">--</span></span>
-            </div>
-            <div class="version-info">
-                <span>Black Rock Payment Terminal v1.0</span>
-            </div>
-        </footer>
-    </div>
-    
-    <!-- Receipt Modal -->
-    <div class="modal" id="receipt-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="text-xl font-bold text-gray-800">Receipt</h2>
-                <span class="close-modal">&times;</span>
-            </div>
-            <div class="modal-body p-4 bg-gray-100 rounded-lg" id="receipt-container">
-                <!-- Receipt details will be injected here -->
-            </div>
-            <div class="modal-footer">
-                <button id="print-receipt-btn" class="secondary-btn">Print</button>
-                <button id="close-receipt-btn" class="secondary-btn">Close</button>
-            </div>
-        </div>
-    </div>
-    
-    <script src="script.js"></script>
-</body>
-</html>
+.form-group label {
+    font-weight: 600;
+    color: #4b5563; /* gray-600 */
+    margin-bottom: 0.5rem;
+    display: block;
+}
+.input-with-icon {
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+.currency-symbol {
+    position: absolute;
+    left: 1rem;
+    color: #6b7280; /* gray-500 */
+    font-weight: 600;
+}
+.input-with-icon input {
+    padding-left: 2.5rem;
+}
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+.form-group .auth-code-hint {
+    color: #6b7280;
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+    display: block;
+}
+.button-group {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+}
+.primary-btn, .secondary-btn, .danger-btn {
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    transition: all 0.2s;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+.primary-btn {
+    background-color: #2563eb; /* blue-600 */
+    color: white;
+    border: none;
+}
+.primary-btn:hover { background-color: #1d4ed8; } /* blue-700 */
+.secondary-btn {
+    background-color: #d1d5db; /* gray-300 */
+    color: #1f2937; /* gray-800 */
+    border: none;
+}
+.secondary-btn:hover { background-color: #9ca3af; } /* gray-400 */
+.danger-btn {
+    background-color: #ef4444; /* red-500 */
+    color: white;
+    border: none;
+}
+.danger-btn:hover { background-color: #dc2626; } /* red-600 */
+
+.transaction-result {
+    background-color: #f9fafb;
+    border-radius: 1rem;
+    padding: 1.5rem;
+}
+.transaction-result .result-content {
+    min-height: 100px;
+    background-color: #e5e7eb;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+.transaction-result .placeholder-text {
+    color: #6b7280;
+    font-style: italic;
+}
+
+.payout-tabs {
+    display: flex;
+    border-bottom: 2px solid #e5e7eb;
+    margin-bottom: 1.5rem;
+}
+.payout-tab {
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    color: #6b7280;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    transition: color 0.2s;
+    border-bottom: 3px solid transparent;
+}
+.payout-tab.active {
+    color: #2563eb;
+    border-bottom-color: #2563eb;
+}
+
+.payout-content {
+    display: none;
+}
+.payout-content.active {
+    display: block;
+}
+
+.history-table-container {
+    overflow-x: auto;
+}
+#history-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+#history-table th, #history-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+}
+#history-table th {
+    background-color: #e5e7eb;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.875rem;
+    color: #4b5563;
+}
+#history-table tbody tr:last-child td {
+    border-bottom: none;
+}
+.status-dot {
+    height: 10px;
+    width: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 0.5rem;
+}
+.status-dot.success { background-color: #10b981; } /* green-500 */
+.status-dot.failed { background-color: #f87171; } /* red-400 */
+.status-dot.pending { background-color: #fcd34d; } /* amber-300 */
+
+.mti-stream-container {
+    height: 400px; /* Fixed height to enable scrolling */
+    overflow-y: scroll;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    padding: 1rem;
+    background-color: #1f2937; /* gray-800 */
+    color: #e5e7eb; /* gray-200 */
+    font-family: monospace;
+    font-size: 0.875rem;
+}
+.mti-message {
+    border-bottom: 1px dashed #4b5563; /* gray-600 */
+    padding: 0.5rem 0;
+}
+.mti-message:last-child {
+    border-bottom: none;
+}
+.mti-timestamp {
+    color: #9ca3af; /* gray-400 */
+    font-size: 0.75rem;
+}
+.mti-code {
+    font-weight: bold;
+    color: #fcd34d; /* amber-300 */
+}
+.mti-description {
+    color: #d1d5db; /* gray-300 */
+}
+
+/* Modal Styles */
+.modal {
+    /* Correct way to hide the modal */
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.4);
+    justify-content: center;
+    align-items: center;
+}
+.modal-content {
+    background-color: #fefefe;
+    padding: 2rem;
+    border-radius: 1rem;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+}
+.close-modal {
+    color: #aaa;
+    font-size: 1.5rem;
+    font-weight: bold;
+    cursor: pointer;
+}
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+/* Specific Login Section Styles */
+#login-section {
+    max-width: 420px;
+}
