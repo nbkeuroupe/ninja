@@ -50,13 +50,12 @@ let mtiStreamInterval = null;
  */
 function showTransactionResult(message, type = 'info') {
     transactionResultContent.innerHTML = `<p>${message}</p>`;
-    // You can add color coding here if needed
     if (type === 'success') {
-        transactionResultContent.style.color = '#10b981'; // Tailwind green-500
+        transactionResultContent.style.color = '#10b981';
     } else if (type === 'error') {
-        transactionResultContent.style.color = '#ef4444'; // Tailwind red-500
+        transactionResultContent.style.color = '#ef4444';
     } else {
-        transactionResultContent.style.color = '#4b5563'; // Tailwind gray-600
+        transactionResultContent.style.color = '#4b5563';
     }
 }
 
@@ -75,7 +74,6 @@ function updateStatus(newStatus) {
  * @param {object} transaction The transaction object.
  */
 function addTransactionToHistory(transaction) {
-    // Remove placeholder row if it exists
     const placeholderRow = document.querySelector('.placeholder-row');
     if (placeholderRow) {
         placeholderRow.remove();
@@ -136,8 +134,11 @@ function addMTI(mtiCode, description) {
         <span class="mti-code">${mtiCode}</span>: 
         <span class="mti-description">${description}</span>
     `;
+    const placeholder = mtiStreamContainer.querySelector('p');
+    if (placeholder) {
+        placeholder.remove();
+    }
     mtiStreamContainer.prepend(messageElement);
-    // Keep the stream from getting too long
     if (mtiStreamContainer.children.length > 20) {
         mtiStreamContainer.lastChild.remove();
     }
@@ -147,10 +148,8 @@ function addMTI(mtiCode, description) {
  * Simulates a real-time stream of MTI messages.
  */
 function startMTIStreamSimulation() {
-    // Add initial placeholder message
     mtiStreamContainer.innerHTML = '<p class="text-gray-500 italic text-center">Waiting for messages...</p>';
     
-    // Simulate periodic messages from the backend
     mtiStreamInterval = setInterval(() => {
         const messages = [
             { code: '0800', desc: 'Network Management Request' },
@@ -162,7 +161,7 @@ function startMTIStreamSimulation() {
         ];
         const randomMessage = messages[Math.floor(Math.random() * messages.length)];
         addMTI(randomMessage.code, randomMessage.desc);
-    }, 5000); // Send a new message every 5 seconds
+    }, 5000);
 }
 
 // --- Event Handlers ---
@@ -175,15 +174,12 @@ loginButton.addEventListener('click', () => {
     const terminalId = terminalIdInput.value.trim();
 
     if (merchantId && terminalId) {
-        // Here you would make a real API call to your backend to validate credentials.
-        // For this example, we'll simulate a successful login.
         loginSection.classList.add('hidden');
         mainTerminalView.classList.remove('hidden');
         footerMerchantId.textContent = merchantId;
         footerTerminalId.textContent = terminalId;
         updateStatus('ONLINE');
         loginMessage.textContent = '';
-        mtiStreamSection.classList.remove('hidden');
         startMTIStreamSimulation();
     } else {
         loginMessage.textContent = 'Please enter both Merchant ID and Terminal ID.';
@@ -199,7 +195,6 @@ processButton.addEventListener('click', async () => {
     const cardNumber = document.getElementById('card-number').value.trim();
     const protocol = protocolSelect.value;
     
-    // Basic validation
     if (isNaN(amount) || amount <= 0) {
         showTransactionResult('Please enter a valid amount.', 'error');
         return;
@@ -213,7 +208,7 @@ processButton.addEventListener('click', async () => {
         return;
     }
     
-    const requiredProtocols = ['101.1', '101.4', '101.7', '201.1'];
+    const requiredProtocols = ['101.1', '101.4', '101.7', '201.1', '201.3', '201.5'];
     if (requiredProtocols.includes(protocol)) {
         if (!authCodeInput.value.trim()) {
             showTransactionResult('Auth code is required for this protocol.', 'error');
@@ -227,7 +222,6 @@ processButton.addEventListener('click', async () => {
     processButton.disabled = true;
     clearButton.disabled = true;
 
-    // Simulate sending an MTI 0100 message (Authorization Request)
     addMTI('0100', 'Sending Authorization Request...');
 
     const API_ENDPOINT = 'https://be-vezt.onrender.com/api/payments';
@@ -253,7 +247,7 @@ processButton.addEventListener('click', async () => {
         const result = await response.json();
 
         if (response.ok && result.status === 'success') {
-            addMTI('0210', 'Authorization Response received (Approved)'); // Simulating MTI 0210
+            addMTI('0210', 'Authorization Response received (Approved)');
             showTransactionResult(`Payment successful! Transaction ID: ${result.transactionId}`, 'success');
             updateStatus('ONLINE');
             currentTransaction = {
@@ -273,7 +267,7 @@ processButton.addEventListener('click', async () => {
             printButton.disabled = false;
             voidButton.disabled = false;
         } else {
-            addMTI('0210', 'Authorization Response received (Declined)'); // Simulating MTI 0210
+            addMTI('0210', 'Authorization Response received (Declined)');
             showTransactionResult(`Payment failed: ${result.message}`, 'error');
             updateStatus('ONLINE');
             currentTransaction = {
@@ -295,7 +289,7 @@ processButton.addEventListener('click', async () => {
         }
     } catch (error) {
         console.error('Network Error:', error);
-        addMTI('0210', 'Authorization Response failed (Timeout)'); // Simulating MTI 0210
+        addMTI('0210', 'Authorization Response failed (Timeout)');
         showTransactionResult('A network error occurred. Please try again.', 'error');
         updateStatus('OFFLINE');
     } finally {
@@ -326,11 +320,9 @@ clearButton.addEventListener('click', () => {
  */
 protocolSelect.addEventListener('change', () => {
     const protocolValue = protocolSelect.value;
-    // Protocols that require an auth code
-    const requiredProtocols = ['101.1', '101.4', '101.7', '201.1'];
+    const requiredProtocols = ['101.1', '101.4', '101.7', '201.1', '201.3', '201.5'];
     if (requiredProtocols.includes(protocolValue)) {
         authCodeContainer.style.display = 'block';
-        // Set placeholder text based on protocol
         if (protocolValue === '101.1' || protocolValue === '101.7') {
             authCodeInput.placeholder = '4-digit code';
             authCodeInput.setAttribute('maxlength', '4');
@@ -349,14 +341,15 @@ protocolSelect.addEventListener('change', () => {
  */
 payoutTabs.forEach(tab => {
     tab.addEventListener('click', () => {
-        // Deactivate all tabs and hide all content sections
-        payoutTabs.forEach(t => t.classList.remove('active-tab'));
+        payoutTabs.forEach(t => t.classList.remove('active'));
+        payoutContents.forEach(c => c.classList.remove('active'));
         payoutContents.forEach(c => c.classList.add('hidden'));
 
-        // Activate the clicked tab and show the corresponding content
-        tab.classList.add('active-tab');
+        tab.classList.add('active');
         const contentClass = tab.textContent.toLowerCase().replace(' ', '-') + '-content';
-        document.querySelector(`.${contentClass}`).classList.remove('hidden');
+        const correspondingContent = document.querySelector(`.${contentClass}`);
+        correspondingContent.classList.remove('hidden');
+        correspondingContent.classList.add('active');
     });
 });
 
@@ -372,7 +365,6 @@ saveBankButton.addEventListener('click', () => {
     };
     console.log('Saving Bank Details:', bankDetails);
     
-    // Simulate a successful save and then trigger payout confirmation
     setTimeout(() => {
         addMTI('0220', 'Payout trigger sent for Bank Transfer');
         setTimeout(() => {
@@ -392,7 +384,6 @@ saveCryptoButton.addEventListener('click', () => {
     };
     console.log('Saving Crypto Details:', cryptoDetails);
 
-    // Simulate a successful save and then trigger payout confirmation
     setTimeout(() => {
         addMTI('0220', 'Payout trigger sent for Crypto Transfer');
         setTimeout(() => {
@@ -432,11 +423,9 @@ printReceiptButton.addEventListener('click', () => {
  */
 voidButton.addEventListener('click', () => {
     if (currentTransaction && currentTransaction.status === 'success') {
-        // Here, you would make a real API call to your backend to void the transaction
         console.log(`Attempting to void transaction ID: ${currentTransaction.id}`);
         addMTI('0420', 'Reversal Request sent...');
         
-        // Simulate a successful void
         setTimeout(() => {
             currentTransaction.status = 'failed';
             currentTransaction.type = 'Void';
@@ -456,7 +445,6 @@ historyBody.addEventListener('click', (event) => {
     const row = target.closest('tr');
     if (!row) return;
 
-    // A more robust method is to use a data attribute
     const transactionId = row.querySelector('td:nth-child(1)').textContent;
 
     if (target.classList.contains('view-receipt-btn')) {
@@ -467,14 +455,12 @@ historyBody.addEventListener('click', (event) => {
     } else if (target.classList.contains('void-transaction-btn')) {
         const transaction = transactionHistory.find(t => t.id === transactionId);
         if (transaction) {
-            // Simulate voiding
             transaction.status = 'failed';
             alert(`Transaction ${transaction.id} has been voided.`);
-            // Update the UI
             row.querySelector('.status-dot').classList.remove('success');
             row.querySelector('.status-dot').classList.add('failed');
             row.querySelector('td:nth-child(4)').innerHTML = `<span class="status-dot failed"></span>Failed`;
-            target.remove(); // Remove the void button
+            target.remove();
         }
     }
 });
