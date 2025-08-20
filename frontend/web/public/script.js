@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Configuration for API and WebSocket URLs
-    // YOU MUST UPDATE THESE URLS WITH YOUR DEPLOYED BACKEND ADDRESS
+    // YOU MUST UPDATE THESE URLS WITH YOUR DEPLOYED BACKEND ADDRESSES
     const CONFIG = {
         API_URL: 'https://your-deployed-backend-url.com/api', // Example: 'https://blackrock-payments.com/api'
         WS_URL: 'wss://your-deployed-backend-url.com/ws'    // Example: 'wss://blackrock-payments.com/ws'
@@ -27,8 +27,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const processBtn = document.getElementById('process-btn');
     const clearBtn = document.getElementById('clear-btn');
-    const printBtn = document.getElementById('print-btn');
-    const voidBtn = document.getElementById('void-btn');
     
     const historyBody = document.getElementById('history-body');
     const mtiMessageLog = document.getElementById('mti-message-log');
@@ -178,7 +176,7 @@ document.addEventListener('DOMContentLoaded', function() {
             loginError.textContent = '';
             showPage('payout-page');
             initializeTerminal();
-            connectWebSocket(); // Start WebSocket connection after successful login
+            connectWebSocket();
         } else {
             loginError.textContent = 'Invalid username or password.';
         }
@@ -483,7 +481,7 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
         receiptContainer.textContent = receiptHTML;
         receiptModal.style.display = 'block';
-    }
+    });
     
     // Close receipt modal
     closeModalBtn.addEventListener('click', function() {
@@ -630,8 +628,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const accountName = document.getElementById('account-name').value;
         const accountNumber = document.getElementById('account-number').value;
         const routingNumber = document.getElementById('routing-number').value;
-        const swiftCode = document.getElementById('swift-code').value;
-        const iban = document.getElementById('iban').value;
         if (!bankName || !accountName || !accountNumber || !routingNumber) {
             alert('Please fill in all required bank details');
             return;
