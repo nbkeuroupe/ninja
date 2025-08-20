@@ -1,4 +1,11 @@
 document.addEventListener('DOMContentLoaded', function() {
+    // Configuration for API and WebSocket URLs
+    // YOU MUST UPDATE THESE URLS WITH YOUR DEPLOYED BACKEND ADDRESS
+    const CONFIG = {
+        API_URL: 'https://your-deployed-backend-url.com/api', // Example: 'https://blackrock-payments.com/api'
+        WS_URL: 'wss://your-deployed-backend-url.com/ws'    // Example: 'wss://blackrock-payments.com/ws'
+    };
+
     // Elements
     const statusText = document.getElementById('status-text');
     const statusLight = document.getElementById('status-light');
@@ -63,7 +70,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Terminal state
     let terminalStatus = {
-        online: true,
+        online: false, // Default to offline on page load
         merchantId: '',
         terminalId: '',
         currentTransactionId: null
@@ -86,10 +93,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Function to handle WebSocket connection
     function connectWebSocket() {
-        // Construct the WebSocket URL. You would need to replace this with your actual backend WebSocket URL.
-        const wsUrl = `ws://${window.location.host}/ws`;
-        
-        ws = new WebSocket(wsUrl);
+        if (!CONFIG.WS_URL) {
+            console.warn('WebSocket URL is not configured. Real-time messages will not work.');
+            appendMessage('WebSocket: URL not configured.', 'error');
+            return;
+        }
+
+        ws = new WebSocket(CONFIG.WS_URL);
 
         ws.onopen = () => {
             console.log('WebSocket connection opened.');
@@ -137,13 +147,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to append messages to the MTI log
     function appendMessage(message, type) {
-        const p = document.createElement('p');
-        p.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-        p.classList.add(type);
-        if (mtiMessageLog.firstChild) {
-            mtiMessageLog.insertBefore(p, mtiMessageLog.firstChild);
-        } else {
-            mtiMessageLog.appendChild(p);
+        // Only append messages if the log container exists
+        if (mtiMessageLog) {
+            const p = document.createElement('p');
+            p.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            p.classList.add(type);
+            if (mtiMessageLog.firstChild) {
+                mtiMessageLog.insertBefore(p, mtiMessageLog.firstChild);
+            } else {
+                mtiMessageLog.appendChild(p);
+            }
         }
     }
 
@@ -291,35 +304,40 @@ document.addEventListener('DOMContentLoaded', function() {
             is_online: true
         };
         
-        // Simulate an API call
-        setTimeout(() => {
-            const response = {
-                transaction_id: 'txn_' + Date.now(),
-                status: Math.random() > 0.5 ? 'APPROVED' : 'DECLINED', // Randomly approve or decline
-                approval_code: '123456',
-                amount: paymentData.amount,
-                currency: paymentData.currency,
-                timestamp: new Date().toISOString(),
-                response_message: 'Simulated response'
-            };
-
-            if (response.status === 'APPROVED') {
-                addTransactionToHistory(response);
-                terminalStatus.currentTransactionId = response.transaction_id;
-                successMessageDetails.innerHTML = `
-                    <p><strong>Transaction ID:</strong> ${response.transaction_id}</p>
-                    <p><strong>Auth Code:</strong> ${response.approval_code || 'N/A'}</p>
-                    <p><strong>Amount:</strong> ${new Intl.NumberFormat('en-US', { style: 'currency', currency: response.currency }).format(response.amount)}</p>
-                    <p><strong>Message:</strong> ${response.response_message || 'Transaction approved'}</p>
-                `;
-                showPage('success-page');
-            } else {
-                rejectMessageDetails.innerHTML = `
-                    <p><strong>Error:</strong> Payment processing failed. Please try again.</p>
-                `;
-                showPage('reject-page');
+        fetch(`${CONFIG.API_URL}/payment`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(paymentData)
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(errorData => {
+                    throw new Error(errorData.error || `HTTP error ${response.status}`);
+                });
             }
-        }, 2000); // Simulate 2-second processing time
+            return response.json();
+        })
+        .then(data => {
+            addTransactionToHistory(data);
+            terminalStatus.currentTransactionId = data.transaction_id;
+            
+            successMessageDetails.innerHTML = `
+                <p><strong>Transaction ID:</strong> ${data.transaction_id}</p>
+                <p><strong>Auth Code:</strong> ${data.approval_code || 'N/A'}</p>
+                <p><strong>Amount:</strong> ${new Intl.NumberFormat('en-US', { style: 'currency', currency: data.currency }).format(data.amount)}</p>
+                <p><strong>Message:</strong> ${data.response_message || 'Transaction approved'}</p>
+            `;
+            showPage('success-page');
+        })
+        .catch(error => {
+            console.error('Error processing payment:', error);
+            rejectMessageDetails.innerHTML = `
+                <p><strong>Error:</strong> ${error.message || 'Payment processing failed. Please try again.'}</p>
+            `;
+            showPage('reject-page');
+        });
     });
     
     // Validate inputs function
@@ -388,6 +406,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <td class="${transaction.status.toLowerCase()}">${transaction.status}</td>
             <td>
                 <button class="view-btn">View</button>
+                ${transaction.status === 'APPROVED' ? '<button class="void-btn">Void</button>' : ''}
             </td>
         `;
         if (historyBody.firstChild) {
@@ -399,6 +418,12 @@ document.addEventListener('DOMContentLoaded', function() {
         viewBtn.addEventListener('click', function() {
             showReceipt(transaction);
         });
+        const voidBtn = row.querySelector('.void-btn');
+        if (voidBtn) {
+            voidBtn.addEventListener('click', function() {
+                voidTransaction(transaction.transaction_id);
+            });
+        }
     }
     
     // Clear form
@@ -412,6 +437,20 @@ document.addEventListener('DOMContentLoaded', function() {
         authCodeInput.value = '';
         authCodeInput.style.borderColor = '';
         authCodeInput.style.backgroundColor = '';
+    });
+    
+    // Print receipt
+    printBtn.addEventListener('click', function() {
+        if (terminalStatus.currentTransactionId) {
+            fetch(`${CONFIG.API_URL}/transaction/${terminalStatus.currentTransactionId}`)
+                .then(response => response.json())
+                .then(transaction => {
+                    showReceipt(transaction);
+                })
+                .catch(error => {
+                    console.error('Error fetching transaction:', error);
+                });
+        }
     });
     
     // Show receipt modal
@@ -478,27 +517,100 @@ document.addEventListener('DOMContentLoaded', function() {
         printWindow.print();
     });
     
-    // Initialize terminal (called after login)
-    function initializeTerminal() {
-        // Simulate an API call to get terminal info
-        setTimeout(() => {
-            terminalStatus.merchantId = 'MERCHANT_001';
-            terminalStatus.terminalId = 'TERMINAL_001';
-            terminalIdEl.textContent = 'TERMINAL_001';
-            merchantIdEl.textContent = 'MERCHANT_001';
-            updateConnectionStatus(true);
-        }, 500);
+    // Void transaction
+    voidBtn.addEventListener('click', function() {
+        if (terminalStatus.currentTransactionId) {
+            voidTransaction(terminalStatus.currentTransactionId);
+        }
+    });
+    
+    function voidTransaction(transactionId) {
+        if (confirm('Are you sure you want to void this transaction?')) {
+            fetch(`${CONFIG.API_URL}/transaction/${transactionId}/void`, {
+                method: 'POST'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                displayTransactionResult(data);
+                updateTransactionInHistory(data);
+                if (transactionId === terminalStatus.currentTransactionId) {
+                    voidBtn.disabled = true;
+                }
+            })
+            .catch(error => {
+                console.error('Error voiding transaction:', error);
+                displayError('Failed to void transaction. Please try again.');
+            });
+        }
     }
     
-    function updateConnectionStatus(isOnline) {
-        terminalStatus.online = isOnline;
-        if (isOnline) {
-            statusText.textContent = 'ONLINE';
-            statusLight.className = 'status-light online';
-        } else {
-            statusText.textContent = 'OFFLINE';
-            statusLight.className = 'status-light offline';
+    // Update transaction in history
+    function updateTransactionInHistory(transaction) {
+        const row = historyBody.querySelector(`tr[data-transaction-id="${transaction.transaction_id}"]`);
+        if (row) {
+            const statusCell = row.querySelector('td:nth-child(4)');
+            const actionsCell = row.querySelector('td:nth-child(5)');
+            statusCell.textContent = transaction.status;
+            statusCell.className = transaction.status.toLowerCase();
+            const voidBtn = actionsCell.querySelector('.void-btn');
+            if (voidBtn) {
+                actionsCell.removeChild(voidBtn);
+            }
         }
+    }
+    
+    // Initialize terminal (called after login)
+    function initializeTerminal() {
+        fetch(`${CONFIG.API_URL}/terminal/info`)
+            .then(response => response.json())
+            .then(data => {
+                terminalStatus.merchantId = data.merchant_id;
+                terminalStatus.terminalId = data.terminal_id;
+                terminalIdEl.textContent = data.terminal_id;
+                merchantIdEl.textContent = data.merchant_id;
+            })
+            .catch(error => {
+                console.error('Error fetching terminal info:', error);
+                terminalIdEl.textContent = 'DEFAULT_TERMINAL';
+                merchantIdEl.textContent = 'DEFAULT_MERCHANT';
+            });
+        
+        fetch(`${CONFIG.API_URL}/transactions`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.transactions && data.transactions.length > 0) {
+                    historyBody.innerHTML = '';
+                    data.transactions.forEach(transaction => {
+                        addTransactionToHistory(transaction);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching transaction history:', error);
+            });
+            
+        fetch(`${CONFIG.API_URL}/protocols`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.protocols && data.protocols.length > 0) {
+                    protocolSelect.innerHTML = '';
+                    data.protocols.forEach(protocol => {
+                        const option = document.createElement('option');
+                        option.value = protocol.name;
+                        option.textContent = protocol.name;
+                        protocolSelect.appendChild(option);
+                    });
+                    updateAuthCodeRequirements();
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching protocols:', error);
+            });
     }
     
     // Payout settings tabs
@@ -518,21 +630,100 @@ document.addEventListener('DOMContentLoaded', function() {
         const accountName = document.getElementById('account-name').value;
         const accountNumber = document.getElementById('account-number').value;
         const routingNumber = document.getElementById('routing-number').value;
+        const swiftCode = document.getElementById('swift-code').value;
+        const iban = document.getElementById('iban').value;
         if (!bankName || !accountName || !accountNumber || !routingNumber) {
             alert('Please fill in all required bank details');
             return;
         }
-        alert('Bank payout settings saved successfully');
+        const payoutData = {
+            method: 'BANK',
+            settings: {
+                account_name: accountName,
+                account_number: accountNumber,
+                routing_number: routingNumber,
+                bank_name: bankName,
+                swift_code: swiftCode || null,
+                iban: iban || null
+            }
+        };
+        fetch(`${CONFIG.API_URL}/payout/settings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payoutData)
+        })
+        .then(response => {
+            if (!response.ok) { throw new Error(`HTTP error ${response.status}`); }
+            return response.json();
+        })
+        .then(data => { alert('Bank payout settings saved successfully'); })
+        .catch(error => {
+            console.error('Error saving bank payout settings:', error);
+            alert('Failed to save bank payout settings. Please try again.');
+        });
     });
     
     // Save crypto payout settings
     saveCryptoBtn.addEventListener('click', function() {
         const cryptoCurrency = document.getElementById('crypto-currency').value;
         const walletAddress = document.getElementById('wallet-address').value;
+        const network = document.getElementById('network').value;
         if (!cryptoCurrency || !walletAddress) {
             alert('Please fill in all required crypto details');
             return;
         }
-        alert('Crypto payout settings saved successfully');
+        const payoutData = {
+            method: 'CRYPTO',
+            settings: {
+                wallet_address: walletAddress,
+                currency: cryptoCurrency,
+                network: network || null
+            }
+        };
+        fetch(`${CONFIG.API_URL}/payout/settings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payoutData)
+        })
+        .then(response => {
+            if (!response.ok) { throw new Error(`HTTP error ${response.status}`); }
+            return response.json();
+        })
+        .then(data => { alert('Crypto payout settings saved successfully'); })
+        .catch(error => {
+            console.error('Error saving crypto payout settings:', error);
+            alert('Failed to save crypto payout settings. Please try again.');
+        });
+    });
+    
+    // Check connection status
+    function checkConnectionStatus() {
+        if (!CONFIG.API_URL) return;
+        fetch(`${CONFIG.API_URL}/status`)
+            .then(response => {
+                if (response.ok) { updateConnectionStatus(true); } else { updateConnectionStatus(false); }
+            })
+            .catch(() => { updateConnectionStatus(false); });
+    }
+    
+    function updateConnectionStatus(isOnline) {
+        terminalStatus.online = isOnline;
+        if (isOnline) {
+            statusText.textContent = 'ONLINE';
+            statusLight.className = 'status-light online';
+        } else {
+            statusText.textContent = 'OFFLINE';
+            statusLight.className = 'status-light offline';
+        }
+    }
+    
+    checkConnectionStatus();
+    setInterval(checkConnectionStatus, 30000);
+    
+    // Close modal when clicking outside
+    window.addEventListener('click', function(event) {
+        if (event.target === receiptModal) {
+            receiptModal.style.display = 'none';
+        }
     });
 });
