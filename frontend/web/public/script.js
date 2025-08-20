@@ -133,27 +133,33 @@ document.addEventListener('DOMContentLoaded', function() {
     authCodeInput.addEventListener('input', function(e) {
         const selectedProtocol = protocolSelect.value;
         const protocolConfig = PROTOCOLS[selectedProtocol];
+// Auth code input validation - Corrected to hide hint on valid input
+authCodeInput.addEventListener('input', function(e) {
+    const selectedProtocol = protocolSelect.value;
+    const protocolConfig = PROTOCOLS[selectedProtocol];
+    
+    if (protocolConfig) {
+        let value = e.target.value;
 
-        if (protocolConfig) {
-            let value = e.target.value;
+        // Always restrict to digits only
+        value = value.replace(/\D/g, ''); 
 
-            // Always restrict to digits only
-            value = value.replace(/\D/g, ''); 
+        // Limit length
+        value = value.substring(0, protocolConfig.approval_length);
+        e.target.value = value;
 
-            // Limit length
-            value = value.substring(0, protocolConfig.approval_length);
-            e.target.value = value;
-
-            // Visual feedback for valid input
-            if (value.length === protocolConfig.approval_length) {
-                e.target.style.borderColor = '#2ecc71';
-                e.target.style.backgroundColor = '#f8fff8';
-            } else {
-                e.target.style.borderColor = '#e74c3c';
-                e.target.style.backgroundColor = '#fff8f8';
-            }
+        // Visual feedback for valid input
+        if (value.length === protocolConfig.approval_length) {
+            e.target.style.borderColor = '#2ecc71';
+            e.target.style.backgroundColor = '#f8fff8';
+            authCodeHint.style.display = 'none'; // Hide the hint
+        } else {
+            e.target.style.borderColor = '#e74c3c';
+            e.target.style.backgroundColor = '#fff8f8';
+            authCodeHint.style.display = 'block'; // Show the hint
         }
-    });
+    }
+});
 
     // Process payment
     processBtn.addEventListener('click', function() {
