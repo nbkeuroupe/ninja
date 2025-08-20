@@ -4,285 +4,235 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Black Rock Payment Terminal</title>
+    <!-- Use the Inter font from Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Link to the external stylesheet -->
     <link rel="stylesheet" href="styles.css">
-    <script src="script.js"></script>
+    <!-- Load Tailwind CSS from CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <div class="terminal-container">
-        <!-- Main application header -->
-        <header>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <!-- Login Section - Initial view -->
+    <div id="login-section" class="terminal-container bg-white p-6 rounded-3xl w-full">
+        <h1 class="text-center text-3xl font-bold text-gray-800 mb-6">Terminal Login</h1>
+        <p class="text-center text-gray-600 mb-6">Enter your credentials to access the terminal.</p>
+        <div class="form-group">
+            <label for="merchant-id-input">Merchant ID</label>
+            <input type="text" id="merchant-id-input" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter Merchant ID">
+        </div>
+        <div class="form-group mt-4">
+            <label for="terminal-id-input">Terminal ID</label>
+            <input type="text" id="terminal-id-input" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter Terminal ID">
+        </div>
+        <div class="button-group justify-center">
+            <button id="login-btn" class="primary-btn w-full">Login</button>
+        </div>
+        <div id="login-message" class="text-center mt-4 text-sm text-red-500"></div>
+    </div>
+    
+    <!-- Main Terminal View - Initially hidden -->
+    <div id="main-terminal-view" class="terminal-container bg-white p-6 rounded-3xl w-full hidden">
+        <header class="flex justify-between items-center mb-6">
             <div class="logo">
-                <h1>Black Rock</h1>
-                <span class="subtitle">Payment Terminal</span>
+                <h1 class="text-2xl font-bold text-gray-800">Black Rock</h1>
+                <span class="text-sm text-gray-500">Payment Terminal</span>
             </div>
             <div class="status-indicator">
-                <span id="status-text">OFFLINE</span>
+                <span id="status-text" class="font-medium text-gray-600">OFFLINE</span>
                 <div id="status-light" class="status-light offline"></div>
             </div>
         </header>
-
-        <!-- Dynamic Content Area -->
-        <div id="app-container">
-            <!-- 1. Login Page -->
-            <div id="login-page" class="page active">
-                <div class="login-form">
-                    <h2>Admin Login</h2>
+        
+        <div class="main-content">
+            <div class="payment-form">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Process Payment</h2>
+                
+                <div class="form-group">
+                    <label for="amount">Amount</label>
+                    <div class="input-with-icon">
+                        <span class="currency-symbol">$</span>
+                        <input type="number" id="amount" step="0.01" min="0.01" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0.00">
+                    </div>
+                </div>
+                
+                <div class="form-group mt-4">
+                    <label for="currency">Currency</label>
+                    <select id="currency" class="w-full px-4 py-2 border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="USD">USD - US Dollar</option>
+                        <option value="EUR">EUR - Euro</option>
+                    </select>
+                </div>
+                
+                <div class="form-group mt-4">
+                    <label for="card-number">Card Number</label>
+                    <input type="text" id="card-number" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="XXXX XXXX XXXX XXXX">
+                </div>
+                
+                <div class="form-row mt-4">
                     <div class="form-group">
-                        <label for="username">Username</label>
-                        <input type="text" id="username" placeholder="Enter username">
+                        <label for="expiry">Expiry Date</label>
+                        <input type="text" id="expiry" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="MM/YY">
                     </div>
                     <div class="form-group">
-                        <label for="password">Password</label>
-                        <input type="password" id="password" placeholder="Enter password">
+                        <label for="cvv">CVV</label>
+                        <input type="text" id="cvv" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="XXX">
                     </div>
-                    <button id="login-btn" class="primary-btn">Login</button>
-                    <div id="login-error" class="error-message"></div>
+                </div>
+                
+                <div class="form-group mt-4">
+                    <label for="cardholder">Cardholder Name</label>
+                    <input type="text" id="cardholder" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Name on card">
+                </div>
+                
+                <div class="form-group mt-4">
+                    <label for="protocol">Protocol</label>
+                    <select id="protocol" class="w-full px-4 py-2 border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">Select a Protocol</option>
+                        <option value="101.1">POS Terminal -101.1 (4-digit approval)</option>
+                        <option value="101.4">POS Terminal -101.4 (6-digit approval)</option>
+                        <option value="101.6">POS Terminal -101.6 (Pre-authorization)</option>
+                        <option value="101.7">POS Terminal -101.7 (4-digit approval)</option>
+                        <option value="101.8">POS Terminal -101.8 (PIN-LESS transaction)</option>
+                        <option value="201.1">POS Terminal -201.1 (6-digit approval)</option>
+                    </select>
+                </div>
+                
+                <!-- New Auth Code field - Hidden by default -->
+                <div class="form-group mt-4" id="auth-code-container" style="display: none;">
+                    <label for="auth-code">Auth Code</label>
+                    <input type="text" id="auth-code" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter auth code">
+                    <span class="auth-code-hint text-xs mt-1 text-gray-500">Required for this protocol</span>
+                </div>
+
+                <div class="button-group mt-6">
+                    <button id="process-btn" class="primary-btn w-full">Process Payment</button>
+                    <button id="clear-btn" class="secondary-btn w-full">Clear</button>
                 </div>
             </div>
-
-            <!-- 2. Payout Settings Page -->
-            <div id="payout-page" class="page">
-                <div class="page-header">
-                    <h2>Payout Settings</h2>
-                    <button id="next-to-card-btn" class="secondary-btn">Next</button>
+            
+            <div class="transaction-result bg-gray-50 rounded-xl p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Transaction Result</h2>
+                <div class="result-content bg-gray-200 rounded-lg p-4 mb-4 min-h-[100px] flex items-center justify-center">
+                    <p class="placeholder-text text-gray-500 italic">Transaction results will appear here</p>
                 </div>
-                <div class="payout-settings">
-                    <div class="payout-tabs">
-                        <button class="payout-tab active" data-tab="bank">Bank Account</button>
-                        <button class="payout-tab" data-tab="crypto">Cryptocurrency</button>
-                    </div>
-                    <div class="payout-content active" id="bank-payout">
-                        <div class="form-group">
-                            <label for="bank-name">Bank Name</label>
-                            <input type="text" id="bank-name" placeholder="Enter bank name">
-                        </div>
-                        <div class="form-group">
-                            <label for="account-name">Account Name</label>
-                            <input type="text" id="account-name" placeholder="Enter account name">
-                        </div>
-                        <div class="form-group">
-                            <label for="account-number">Account Number</label>
-                            <input type="text" id="account-number" placeholder="Enter account number">
-                        </div>
-                        <div class="form-group">
-                            <label for="routing-number">Routing Number</label>
-                            <input type="text" id="routing-number" placeholder="Enter routing number">
-                        </div>
-                        <div class="form-group">
-                            <label for="swift-code">SWIFT Code (International)</label>
-                            <input type="text" id="swift-code" placeholder="Optional">
-                        </div>
-                        <div class="form-group">
-                            <label for="iban">IBAN (International)</label>
-                            <input type="text" id="iban" placeholder="Optional">
-                        </div>
-                        <div class="button-group">
-                            <button id="save-bank-btn" class="primary-btn">Save Bank Details</button>
-                        </div>
-                    </div>
-                    <div class="payout-content" id="crypto-payout">
-                        <div class="form-group">
-                            <label for="crypto-currency">Cryptocurrency</label>
-                            <select id="crypto-currency">
-                                <option value="BTC">Bitcoin (BTC)</option>
-                                <option value="ETH">Ethereum (ETH)</option>
-                                <option value="USDT">Tether (USDT)</option>
-                                <option value="USDC">USD Coin (USDC)</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="wallet-address">Wallet Address</label>
-                            <input type="text" id="wallet-address" placeholder="Enter wallet address">
-                        </div>
-                        <div class="form-group">
-                            <label for="network">Network (for tokens)</label>
-                            <select id="network">
-                                <option value="">Not Applicable</option>
-                                <option value="ETH">Ethereum</option>
-                                <option value="BSC">Binance Smart Chain</option>
-                                <option value="POLYGON">Polygon</option>
-                                <option value="ARBITRUM">Arbitrum</option>
-                            </select>
-                        </div>
-                        <div class="button-group">
-                            <button id="save-crypto-btn" class="primary-btn">Save Crypto Details</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 3. Card Details Page -->
-            <div id="card-details-page" class="page">
-                <div class="page-header">
-                    <h2>Card Details</h2>
-                    <div class="button-group">
-                        <button id="view-history-btn" class="secondary-btn">View History</button>
-                        <button id="view-payout-btn" class="secondary-btn">Payout Settings</button>
-                    </div>
-                </div>
-                <div class="real-time-messages">
-                    <h3>Real-time Messages</h3>
-                    <div id="mti-message-log" class="message-log"></div>
-                </div>
-                <div class="main-content">
-                    <div class="payment-form">
-                        <div class="form-group">
-                            <label for="amount">Amount</label>
-                            <div class="input-with-icon">
-                                <span class="currency-symbol">$</span>
-                                <input type="number" id="amount" step="0.01" min="0.01" placeholder="0.00">
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="currency">Currency</label>
-                            <select id="currency">
-                                <option value="USD">USD - US Dollar</option>
-                                <option value="EUR">EUR - Euro</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="card-number">Card Number</label>
-                            <input type="text" id="card-number" placeholder="XXXX XXXX XXXX XXXX">
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group half">
-                                <label for="expiry">Expiry Date</label>
-                                <input type="text" id="expiry" placeholder="MM/YY">
-                            </div>
-                            <div class="form-group half">
-                                <label for="cvv">CVV</label>
-                                <input type="text" id="cvv" placeholder="XXX">
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="cardholder">Cardholder Name</label>
-                            <input type="text" id="cardholder" placeholder="Name on card">
-                        </div>
-                        <div class="form-group">
-                            <label for="postal-code">Postal/ZIP Code</label>
-                            <input type="text" id="postal-code" placeholder="Optional">
-                        </div>
-                        <div class="form-group">
-                            <label for="protocol">Protocol</label>
-                            <select id="protocol">
-                                <option value="POS Terminal -101.1 (4-digit approval)">POS Terminal -101.1 (4-digit approval)</option>
-                                <option value="POS Terminal -101.4 (6-digit approval)">POS Terminal -101.4 (6-digit approval)</option>
-                                <option value="POS Terminal -101.6 (Pre-authorization)">POS Terminal -101.6 (Pre-authorization)</option>
-                                <option value="POS Terminal -101.7 (4-digit approval)">POS Terminal -101.7 (4-digit approval)</option>
-                                <option value="POS Terminal -101.8 (PIN-LESS transaction)">POS Terminal -101.8 (PIN-LESS transaction)</option>
-                                <option value="POS Terminal -201.1 (6-digit approval)">POS Terminal -201.1 (6-digit approval)</option>
-                                <option value="POS Terminal -201.3 (6-digit approval)">POS Terminal -201.3 (6-digit approval)</option>
-                                <option value="POS Terminal -201.5 (6-digit approval)">POS Terminal -201.5 (6-digit approval)</option>
-                            </select>
-                        </div>
-                        <div class="form-group" id="auth-code-container">
-                            <label for="auth-code">Auth Code</label>
-                            <input type="text" id="auth-code" placeholder="Enter auth code">
-                            <span class="auth-code-hint">Required for this protocol</span>
-                        </div>
-                        <div class="form-group">
-                            <label for="transaction-type">Transaction Type</label>
-                            <select id="transaction-type">
-                                <option value="SALE">Sale</option>
-                                <option value="REFUND">Refund</option>
-                                <option value="PRE_AUTH">Pre-Authorization</option>
-                                <option value="PRE_AUTH_COMPLETION">Pre-Auth Completion</option>
-                                <option value="BALANCE_INQUIRY">Balance Inquiry</option>
-                            </select>
-                        </div>
-                        <div class="button-group">
-                            <button id="process-btn" class="primary-btn">Process Payment</button>
-                            <button id="clear-btn" class="secondary-btn">Clear</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 4. Processing Page -->
-            <div id="processing-page" class="page processing-page">
-                <h2>Processing...</h2>
-                <div class="spinner"></div>
-                <p>Please wait while the transaction is being processed.</p>
-            </div>
-
-            <!-- 5. Success Page -->
-            <div id="success-page" class="page status-page">
-                <div class="status-content">
-                    <div class="status-icon success-icon">✔</div>
-                    <h2>Transaction Approved!</h2>
-                    <p>Your payment was processed successfully.</p>
-                    <div id="success-message-details"></div>
-                    <button id="return-home-success-btn" class="primary-btn">Return to Card Details</button>
-                </div>
-            </div>
-
-            <!-- 6. Reject Page -->
-            <div id="reject-page" class="page status-page">
-                <div class="status-content">
-                    <div class="status-icon reject-icon">✖</div>
-                    <h2>Transaction Failed</h2>
-                    <p>Your payment could not be processed.</p>
-                    <div id="reject-message-details"></div>
-                    <button id="return-home-reject-btn" class="primary-btn">Return to Card Details</button>
-                </div>
-            </div>
-
-            <!-- 7. Transaction History Page -->
-            <div id="history-page" class="page">
-                <div class="page-header">
-                    <h2>Transaction History</h2>
-                    <button id="back-to-card-from-history-btn" class="secondary-btn">Back to Card Details</button>
-                </div>
-                <div class="transaction-history">
-                    <div class="history-table-container">
-                        <table id="history-table">
-                            <thead>
-                                <tr>
-                                    <th>Time</th>
-                                    <th>Type</th>
-                                    <th>Amount</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="history-body">
-                                <tr class="placeholder-row">
-                                    <td colspan="5">No transactions yet</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                <div class="button-group">
+                    <button id="print-btn" class="secondary-btn w-1/2" disabled>Print Receipt</button>
+                    <button id="void-btn" class="danger-btn w-1/2" disabled>Void Transaction</button>
                 </div>
             </div>
         </div>
+        
+        <!-- Payout Settings and History Section -->
+        <div class="payout-settings bg-white rounded-3xl p-6 border border-gray-200">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Payout Settings</h2>
+            <div class="payout-tabs flex mb-4 border-b border-gray-200">
+                <button class="payout-tab px-4 py-2 font-medium text-gray-600 hover:text-blue-600 border-b-2 border-transparent transition-colors duration-200 active-tab">Bank Account</button>
+                <button class="payout-tab px-4 py-2 font-medium text-gray-600 hover:text-blue-600 border-b-2 border-transparent transition-colors duration-200">Cryptocurrency</button>
+            </div>
+            
+            <div class="payout-content bank-content">
+                <div class="form-group mt-4">
+                    <label for="bank-name">Bank Name</label>
+                    <input type="text" id="bank-name" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter bank name">
+                </div>
+                <div class="form-group mt-4">
+                    <label for="account-name">Account Name</label>
+                    <input type="text" id="account-name" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter account name">
+                </div>
+                <div class="form-group mt-4">
+                    <label for="account-number">Account Number</label>
+                    <input type="text" id="account-number" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter account number">
+                </div>
+                <div class="form-group mt-4">
+                    <label for="routing-number">Routing Number</label>
+                    <input type="text" id="routing-number" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter routing number">
+                </div>
+                <div class="button-group">
+                    <button id="save-bank-btn" class="primary-btn">Save Bank Details</button>
+                </div>
+            </div>
+            
+            <div class="payout-content crypto-content hidden">
+                <div class="form-group mt-4">
+                    <label for="crypto-currency">Cryptocurrency</label>
+                    <select id="crypto-currency" class="w-full px-4 py-2 border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="BTC">Bitcoin (BTC)</option>
+                        <option value="ETH">Ethereum (ETH)</option>
+                        <option value="USDT">Tether (USDT)</option>
+                    </select>
+                </div>
+                <div class="form-group mt-4">
+                    <label for="wallet-address">Wallet Address</label>
+                    <input type="text" id="wallet-address" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter wallet address">
+                </div>
+                <div class="button-group">
+                    <button id="save-crypto-btn" class="primary-btn">Save Crypto Details</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- New MTI Stream Section -->
+        <div class="mti-stream bg-gray-900 text-gray-200 rounded-3xl p-6 border border-gray-700 md:col-span-2 md:row-start-2 md:row-end-3 hidden">
+            <h2 class="text-xl font-bold text-gray-100 mb-4">Real-time MTI Stream</h2>
+            <div id="mti-stream-container" class="mti-stream-container">
+                <p class="text-gray-500 italic text-center">Waiting for messages...</p>
+            </div>
+        </div>
 
-        <!-- Main application footer -->
-        <footer>
+        <div class="transaction-history bg-white rounded-3xl p-6 border border-gray-200">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Recent Transactions</h2>
+            <div class="history-table-container">
+                <table id="history-table" class="w-full">
+                    <thead>
+                        <tr class="text-xs text-gray-500 uppercase">
+                            <th class="py-2 px-4">Time</th>
+                            <th class="py-2 px-4">Type</th>
+                            <th class="py-2 px-4">Amount</th>
+                            <th class="py-2 px-4">Status</th>
+                            <th class="py-2 px-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-body">
+                        <tr class="placeholder-row">
+                            <td colspan="5" class="py-4 text-center text-gray-400 italic">No transactions yet</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <footer class="flex justify-between items-center text-xs text-gray-500 mt-4">
             <div class="terminal-info">
-                <span>Terminal ID: <span id="terminal-id">--</span></span>
-                <span>Merchant ID: <span id="merchant-id">--</span></span>
+                <span>Terminal ID: <span id="terminal-id" class="font-bold text-gray-700">--</span></span>
+                <span class="mx-2">|</span>
+                <span>Merchant ID: <span id="merchant-id" class="font-bold text-gray-700">--</span></span>
             </div>
             <div class="version-info">
                 <span>Black Rock Payment Terminal v1.0</span>
             </div>
         </footer>
     </div>
-
+    
     <!-- Receipt Modal -->
     <div class="modal" id="receipt-modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Receipt</h2>
+                <h2 class="text-xl font-bold text-gray-800">Receipt</h2>
                 <span class="close-modal">&times;</span>
             </div>
-            <div class="modal-body">
-                <div id="receipt-container"></div>
+            <div class="modal-body p-4 bg-gray-100 rounded-lg" id="receipt-container">
+                <!-- Receipt details will be injected here -->
             </div>
             <div class="modal-footer">
-                <button id="print-receipt-btn" class="primary-btn">Print</button>
+                <button id="print-receipt-btn" class="secondary-btn">Print</button>
                 <button id="close-receipt-btn" class="secondary-btn">Close</button>
             </div>
         </div>
     </div>
+    
+    <script src="script.js"></script>
 </body>
 </html>
