@@ -8,10 +8,292 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <!-- Link to the external stylesheet -->
-    <link rel="stylesheet" href="styles.css">
     <!-- Load Tailwind CSS from CDN for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* General Styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Container and Grid Layout */
+        .terminal-container {
+            max-width: 900px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 5px 10px -5px rgba(0, 0, 0, 0.04);
+            border-radius: 1.5rem;
+            display: grid;
+            gap: 1.5rem;
+            padding: 1.5rem;
+            margin: auto;
+        }
+
+        /* Desktop Layout (as shown in your image) */
+        @media (min-width: 1024px) {
+            .terminal-container {
+                grid-template-areas:
+                    "header header header"
+                    "main mti-stream mti-stream"
+                    "payout history history"
+                    "footer footer footer";
+                grid-template-columns: 1fr 1fr 1fr;
+            }
+            .terminal-container > header { grid-area: header; }
+            .terminal-container > .main-content { grid-area: main; }
+            .terminal-container > .mti-stream { grid-area: mti-stream; }
+            .terminal-container > .payout-settings { grid-area: payout; }
+            .terminal-container > .transaction-history { grid-area: history; }
+            .terminal-container > footer { grid-area: footer; }
+        }
+
+        /* Responsive Layout for smaller screens */
+        @media (max-width: 1023px) {
+            .terminal-container {
+                grid-template-areas:
+                    "header"
+                    "main"
+                    "mti-stream"
+                    "payout"
+                    "history"
+                    "footer";
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .status-light {
+            width: 1rem;
+            height: 1rem;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 0 0 2px #d1d5db;
+        }
+        .status-light.online { background-color: #10b981; }
+        .status-light.offline { background-color: #f87171; }
+        .status-light.pending { background-color: #fcd34d; }
+
+        .form-group label {
+            font-weight: 600;
+            color: #4b5563;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        .input-with-icon {
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+        .currency-symbol {
+            position: absolute;
+            left: 1rem;
+            color: #6b7280;
+            font-weight: 600;
+        }
+        .input-with-icon input {
+            padding-left: 2.5rem;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+        .form-group .auth-code-hint {
+            color: #6b7280;
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+            display: block;
+        }
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+        }
+        .primary-btn, .secondary-btn, .danger-btn {
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .primary-btn {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+        }
+        .primary-btn:hover { background-color: #1d4ed8; }
+        .secondary-btn {
+            background-color: #d1d5db;
+            color: #1f2937;
+            border: none;
+        }
+        .secondary-btn:hover { background-color: #9ca3af; }
+        .danger-btn {
+            background-color: #ef4444;
+            color: white;
+            border: none;
+        }
+        .danger-btn:hover { background-color: #dc2626; }
+
+        .transaction-result {
+            background-color: #f9fafb;
+            border-radius: 1rem;
+            padding: 1.5rem;
+        }
+        .transaction-result .result-content {
+            min-height: 100px;
+            background-color: #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .transaction-result .placeholder-text {
+            color: #6b7280;
+            font-style: italic;
+        }
+        
+        .payout-tabs {
+            display: flex;
+            border-bottom: 2px solid #e5e7eb;
+            margin-bottom: 1.5rem;
+        }
+        .payout-tab {
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            color: #6b7280;
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+            transition: color 0.2s;
+            border-bottom: 3px solid transparent;
+        }
+        .payout-tab.active {
+            color: #2563eb;
+            border-bottom-color: #2563eb;
+        }
+
+        .payout-content {
+            display: none;
+        }
+        .payout-content.active {
+            display: block;
+        }
+        
+        .history-table-container {
+            overflow-x: auto;
+        }
+        #history-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        #history-table th, #history-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        #history-table th {
+            background-color: #e5e7eb;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.875rem;
+            color: #4b5563;
+        }
+        #history-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+        .status-dot {
+            height: 10px;
+            width: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 0.5rem;
+        }
+        .status-dot.success { background-color: #10b981; }
+        .status-dot.failed { background-color: #f87171; }
+        .status-dot.pending { background-color: #fcd34d; }
+
+        .mti-stream-container {
+            height: 400px;
+            overflow-y: scroll;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            background-color: #1f2937;
+            color: #e5e7eb;
+            font-family: monospace;
+            font-size: 0.875rem;
+        }
+        .mti-message {
+            border-bottom: 1px dashed #4b5563;
+            padding: 0.5rem 0;
+        }
+        .mti-message:last-child {
+            border-bottom: none;
+        }
+        .mti-timestamp {
+            color: #9ca3af;
+            font-size: 0.75rem;
+        }
+        .mti-code {
+            font-weight: bold;
+            color: #fcd34d;
+        }
+        .mti-description {
+            color: #d1d5db;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            padding: 2rem;
+            border-radius: 1rem;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+        }
+        .close-modal {
+            color: #aaa;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        #login-section {
+            max-width: 420px;
+        }
+    </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-4">
 
@@ -234,7 +516,6 @@
         </div>
     </div>
     
-    <!-- Link to the external JavaScript file -->
     <script src="script.js"></script>
 </body>
 </html>
