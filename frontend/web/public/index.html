@@ -576,7 +576,7 @@
         function showTransactionResult(message, type = 'info') {
             transactionResultContent.innerHTML = `<p class="font-medium">${message}</p>`;
             // Reset colors
-            transactionResultContent.classList.remove('text-green-700', 'text-red-700', 'text-gray-600');
+            transactionResultContent.classList.remove('text-green-700', 'text-red-700', 'text-gray-600', 'bg-green-100', 'bg-red-100', 'bg-gray-100');
             // Set new colors
             if (type === 'success') {
                 transactionResultContent.classList.add('bg-green-100', 'text-green-700');
@@ -1000,7 +1000,22 @@
                 }
             }
         });
+
+        // Initialize state on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Hide the main view and show the login section
+            mainTerminalView.classList.add('hidden');
+            loginSection.classList.remove('hidden');
+            // Clear any previous inputs
+            document.getElementById('amount').value = '';
+            document.getElementById('card-number').value = '';
+            document.getElementById('expiry').value = '';
+            document.getElementById('cvv').value = '';
+            document.getElementById('cardholder').value = '';
+            document.getElementById('protocol').value = '';
+            document.getElementById('auth-code').value = '';
+            document.getElementById('auth-code-container').style.display = 'none';
+        });
     </script>
 </body>
 </html>
-
