@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
         currentTransactionId: null
     };
     
-    // Protocol definitions
+    // Protocol definitions - Fixed protocol definitions
     const PROTOCOLS = {
         "POS Terminal -101.1 (4-digit approval)": { approval_length: 4, is_onledger: true },
         "POS Terminal -101.4 (6-digit approval)": { approval_length: 6, is_onledger: true },
@@ -95,6 +95,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectedProtocol = protocolSelect.value;
         const protocolConfig = PROTOCOLS[selectedProtocol];
         
+        console.log('Selected protocol:', selectedProtocol);
+        console.log('Protocol config:', protocolConfig);
+        
         if (protocolConfig) {
             // Show auth code field
             authCodeContainer.style.display = 'block';
@@ -109,25 +112,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 `Enter ${protocolConfig.approval_length}-digit code` : 
                 `Enter ${protocolConfig.approval_length}-character code`;
             authCodeInput.placeholder = placeholder;
+            
+            // Clear existing value if it doesn't match new requirements
+            const currentValue = authCodeInput.value;
+            if (currentValue.length !== protocolConfig.approval_length) {
+                authCodeInput.value = '';
+            }
         } else {
-            // Hide auth code field if no protocol config
+            // Hide auth code field if no protocol config found
             authCodeContainer.style.display = 'none';
             authCodeHint.style.display = 'none';
         }
     }
     
     // Initialize auth code field
-    // Set auth code container to display based on initial protocol selection
-    const initialProtocol = protocolSelect.value;
-    const initialProtocolConfig = PROTOCOLS[initialProtocol];
+    updateAuthCodeRequirements();
     
-    if (initialProtocolConfig) {
-        authCodeContainer.style.display = 'block';
-        authCodeHint.style.display = 'block';
-        authCodeHint.textContent = `Required: ${initialProtocolConfig.approval_length} ${initialProtocolConfig.is_onledger ? 'digits' : 'alphanumeric characters'}`;
-    }
-    
-    // Auth code input validation
+    // Auth code input validation - FIXED
     authCodeInput.addEventListener('input', function(e) {
         const selectedProtocol = protocolSelect.value;
         const protocolConfig = PROTOCOLS[selectedProtocol];
@@ -135,25 +136,40 @@ document.addEventListener('DOMContentLoaded', function() {
         if (protocolConfig) {
             let value = e.target.value;
             
-            // For numeric protocols, restrict to digits
-            // Check if protocol requires numeric auth code based on is_onledger property
+            // For onledger protocols (101.x series), restrict to digits only
             if (protocolConfig.is_onledger) {
-                value = value.replace(/\D/g, '');
+                value = value.replace(/\D/g, ''); // Remove non-digits
+            } else {
+                // For offledger protocols, allow alphanumeric
+                value = value.replace(/[^a-zA-Z0-9]/g, ''); // Remove special characters
             }
             
             // Limit length
             value = value.substring(0, protocolConfig.approval_length);
             
             e.target.value = value;
+            
+            // Visual feedback for valid input
+            if (value.length === protocolConfig.approval_length) {
+                e.target.style.borderColor = '#2ecc71';
+                e.target.style.backgroundColor = '#f8fff8';
+            } else {
+                e.target.style.borderColor = '#e74c3c';
+                e.target.style.backgroundColor = '#fff8f8';
+            }
         }
     });
     
     // Process payment
     processBtn.addEventListener('click', function() {
+        console.log('Process button clicked');
+        
         // Validate inputs
         if (!validateInputs()) {
             return;
         }
+        
+        console.log('Validation passed, processing payment...');
         
         // Show processing state
         processBtn.disabled = true;
@@ -174,6 +190,8 @@ document.addEventListener('DOMContentLoaded', function() {
             is_online: true
         };
         
+        console.log('Payment data:', paymentData);
+        
         // Send payment request to API
         fetch('/api/payment', {
             method: 'POST',
@@ -183,12 +201,15 @@ document.addEventListener('DOMContentLoaded', function() {
             body: JSON.stringify(paymentData)
         })
         .then(response => {
+            console.log('API response status:', response.status);
             if (!response.ok) {
                 throw new Error(`HTTP error ${response.status}`);
             }
             return response.json();
         })
         .then(data => {
+            console.log('Payment response:', data);
+            
             // Update UI with transaction result
             displayTransactionResult(data);
             
@@ -213,58 +234,91 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Validate inputs
+    // FIXED Validate inputs function
     function validateInputs() {
+        console.log('Starting validation...');
+        
         // Check amount
         if (!amountInput.value || parseFloat(amountInput.value) <= 0) {
             displayError('Please enter a valid amount');
+            console.log('Amount validation failed');
             return false;
         }
+        console.log('Amount validation passed');
         
         // Check card number
         const cardNumber = cardNumberInput.value.replace(/\s/g, '');
         if (cardNumber.length < 13 || cardNumber.length > 19) {
             displayError('Please enter a valid card number');
+            console.log('Card number validation failed');
             return false;
         }
+        console.log('Card number validation passed');
         
         // Check expiry date
         const expiryPattern = /^(0[1-9]|1[0-2])\/([0-9]{2})$/;
         if (!expiryPattern.test(expiryInput.value)) {
             displayError('Please enter a valid expiry date (MM/YY)');
+            console.log('Expiry validation failed');
             return false;
         }
+        console.log('Expiry validation passed');
         
         // Check CVV
         if (!cvvInput.value || cvvInput.value.length < 3) {
             displayError('Please enter a valid CVV');
+            console.log('CVV validation failed');
             return false;
         }
+        console.log('CVV validation passed');
         
         // Check cardholder name
-        if (!cardholderInput.value) {
+        if (!cardholderInput.value || cardholderInput.value.trim().length === 0) {
             displayError('Please enter the cardholder name');
+            console.log('Cardholder name validation failed');
             return false;
         }
+        console.log('Cardholder name validation passed');
         
-        // Check auth code if required
+        // FIXED: Check auth code if required
         const selectedProtocol = protocolSelect.value;
         const protocolConfig = PROTOCOLS[selectedProtocol];
         
+        console.log('Checking auth code for protocol:', selectedProtocol);
+        console.log('Protocol config:', protocolConfig);
+        console.log('Auth code value:', authCodeInput.value);
+        console.log('Auth code length:', authCodeInput.value.length);
+        
         if (protocolConfig) {
-            if (authCodeInput.value.length !== protocolConfig.approval_length) {
+            const authCode = authCodeInput.value.trim();
+            
+            // Check length
+            if (authCode.length !== protocolConfig.approval_length) {
                 displayError(`Please enter a valid ${protocolConfig.approval_length}-character auth code`);
+                console.log(`Auth code length validation failed. Expected: ${protocolConfig.approval_length}, Got: ${authCode.length}`);
                 return false;
             }
             
-            // For numeric protocols, check if auth code is numeric
-            // Check if protocol requires numeric auth code based on is_onledger property
-            if (protocolConfig.is_onledger && !/^\d+$/.test(authCodeInput.value)) {
+            // For onledger protocols, check if auth code is numeric
+            if (protocolConfig.is_onledger && !/^\d+$/.test(authCode)) {
                 displayError('Auth code must be numeric for this protocol');
+                console.log('Auth code numeric validation failed');
                 return false;
             }
+            
+            // For offledger protocols, check if auth code is alphanumeric
+            if (!protocolConfig.is_onledger && !/^[a-zA-Z0-9]+$/.test(authCode)) {
+                displayError('Auth code must be alphanumeric for this protocol');
+                console.log('Auth code alphanumeric validation failed');
+                return false;
+            }
+            
+            console.log('Auth code validation passed');
+        } else {
+            console.log('No protocol config found, skipping auth code validation');
         }
         
+        console.log('All validations passed!');
         return true;
     }
     
@@ -373,6 +427,10 @@ document.addEventListener('DOMContentLoaded', function() {
         cardholderInput.value = '';
         postalCodeInput.value = '';
         authCodeInput.value = '';
+        
+        // Reset auth code field styling
+        authCodeInput.style.borderColor = '';
+        authCodeInput.style.backgroundColor = '';
         
         // Reset result content
         resultContent.innerHTML = '<p class="placeholder-text">Transaction results will appear here</p>';
