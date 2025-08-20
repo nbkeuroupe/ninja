@@ -97,6 +97,8 @@
                         <option value="101.7">POS Terminal -101.7 (4-digit approval)</option>
                         <option value="101.8">POS Terminal -101.8 (PIN-LESS transaction)</option>
                         <option value="201.1">POS Terminal -201.1 (6-digit approval)</option>
+                        <option value="201.3">POS Terminal -201.3 (6-digit approval)</option>
+                        <option value="201.5">POS Terminal -201.5 (6-digit approval)</option>
                     </select>
                 </div>
                 
@@ -125,15 +127,22 @@
             </div>
         </div>
         
-        <!-- Payout Settings and History Section -->
+        <!-- MTI Stream Section -->
+        <div class="mti-stream bg-gray-900 text-gray-200 rounded-3xl p-6 border border-gray-700 md:col-span-2 md:row-start-2 md:row-end-3">
+            <h2 class="text-xl font-bold text-gray-100 mb-4">Real-time MTI Stream</h2>
+            <div id="mti-stream-container" class="mti-stream-container">
+                <p class="text-gray-500 italic text-center">Waiting for messages...</p>
+            </div>
+        </div>
+
         <div class="payout-settings bg-white rounded-3xl p-6 border border-gray-200">
             <h2 class="text-xl font-bold text-gray-800 mb-4">Payout Settings</h2>
             <div class="payout-tabs flex mb-4 border-b border-gray-200">
-                <button class="payout-tab px-4 py-2 font-medium text-gray-600 hover:text-blue-600 border-b-2 border-transparent transition-colors duration-200 active-tab">Bank Account</button>
+                <button class="payout-tab px-4 py-2 font-medium text-gray-600 hover:text-blue-600 border-b-2 border-transparent transition-colors duration-200 active">Bank Account</button>
                 <button class="payout-tab px-4 py-2 font-medium text-gray-600 hover:text-blue-600 border-b-2 border-transparent transition-colors duration-200">Cryptocurrency</button>
             </div>
             
-            <div class="payout-content bank-content">
+            <div class="payout-content bank-content active">
                 <div class="form-group mt-4">
                     <label for="bank-name">Bank Name</label>
                     <input type="text" id="bank-name" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter bank name">
@@ -174,14 +183,6 @@
             </div>
         </div>
         
-        <!-- New MTI Stream Section -->
-        <div class="mti-stream bg-gray-900 text-gray-200 rounded-3xl p-6 border border-gray-700 md:col-span-2 md:row-start-2 md:row-end-3 hidden">
-            <h2 class="text-xl font-bold text-gray-100 mb-4">Real-time MTI Stream</h2>
-            <div id="mti-stream-container" class="mti-stream-container">
-                <p class="text-gray-500 italic text-center">Waiting for messages...</p>
-            </div>
-        </div>
-
         <div class="transaction-history bg-white rounded-3xl p-6 border border-gray-200">
             <h2 class="text-xl font-bold text-gray-800 mb-4">Recent Transactions</h2>
             <div class="history-table-container">
