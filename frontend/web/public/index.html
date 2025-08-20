@@ -4,460 +4,179 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Black Rock Payment Terminal</title>
-    <!-- Use the Inter font from Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <!-- Load Tailwind CSS from CDN for styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        /* General Styles */
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-
-        /* Container and Grid Layout */
-        .terminal-container {
-            max-width: 900px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 5px 10px -5px rgba(0, 0, 0, 0.04);
-            border-radius: 1.5rem;
-            display: grid;
-            gap: 1.5rem;
-            padding: 1.5rem;
-            margin: auto;
-        }
-        
-        /* The main grid layout for the terminal interface on desktop */
-        @media (min-width: 1024px) {
-            .terminal-container {
-                grid-template-areas:
-                    "header header header"
-                    "main mti-stream mti-stream"
-                    "payout payout history"
-                    "footer footer footer";
-                grid-template-columns: 1fr 1fr 1fr;
-            }
-            .terminal-container > header { grid-area: header; }
-            .terminal-container > .main-content { grid-area: main; }
-            .terminal-container > .mti-stream { grid-area: mti-stream; }
-            .terminal-container > .payout-settings { grid-area: payout; }
-            .terminal-container > .transaction-history { grid-area: history; }
-            .terminal-container > footer { grid-area: footer; }
-        }
-
-        /* Responsive Layout for smaller screens */
-        @media (max-width: 1023px) {
-            .terminal-container {
-                grid-template-areas:
-                    "header"
-                    "main"
-                    "mti-stream"
-                    "payout"
-                    "history"
-                    "footer";
-                grid-template-columns: 1fr;
-            }
-        }
-        
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .status-light {
-            width: 1rem;
-            height: 1rem;
-            border-radius: 50%;
-            border: 2px solid white;
-            box-shadow: 0 0 0 2px #d1d5db;
-        }
-        .status-light.online { background-color: #10b981; }
-        .status-light.offline { background-color: #f87171; }
-        .status-light.pending { background-color: #fcd34d; }
-
-        .form-group label {
-            font-weight: 600;
-            color: #4b5563;
-            margin-bottom: 0.5rem;
-            display: block;
-        }
-        .input-with-icon {
-            display: flex;
-            align-items: center;
-            position: relative;
-        }
-        .currency-symbol {
-            position: absolute;
-            left: 1rem;
-            color: #6b7280;
-            font-weight: 600;
-        }
-        .input-with-icon input {
-            padding-left: 2.5rem;
-        }
-        .form-row {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1rem;
-        }
-        .form-group .auth-code-hint {
-            color: #6b7280;
-            font-size: 0.75rem;
-            margin-top: 0.25rem;
-            display: block;
-        }
-        .button-group {
-            display: flex;
-            gap: 1rem;
-            justify-content: flex-end;
-            margin-top: 1.5rem;
-        }
-        .primary-btn, .secondary-btn, .danger-btn {
-            font-weight: 600;
-            padding: 0.75rem 1.5rem;
-            border-radius: 0.75rem;
-            transition: all 0.2s;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-        .primary-btn {
-            background-color: #2563eb;
-            color: white;
-            border: none;
-        }
-        .primary-btn:hover { background-color: #1d4ed8; }
-        .secondary-btn {
-            background-color: #d1d5db;
-            color: #1f2937;
-            border: none;
-        }
-        .secondary-btn:hover { background-color: #9ca3af; }
-        .danger-btn {
-            background-color: #ef4444;
-            color: white;
-            border: none;
-        }
-        .danger-btn:hover { background-color: #dc2626; }
-
-        .transaction-result {
-            background-color: #f9fafb;
-            border-radius: 1rem;
-            padding: 1.5rem;
-        }
-        .transaction-result .result-content {
-            min-height: 100px;
-            background-color: #e5e7eb;
-            border-radius: 0.5rem;
-            padding: 1rem;
-            margin-bottom: 1rem;
-        }
-        .transaction-result .placeholder-text {
-            color: #6b7280;
-            font-style: italic;
-        }
-        
-        .payout-tabs {
-            display: flex;
-            border-bottom: 2px solid #e5e7eb;
-            margin-bottom: 1.5rem;
-        }
-        .payout-tab {
-            padding: 0.75rem 1.5rem;
-            font-weight: 600;
-            color: #6b7280;
-            background-color: transparent;
-            border: none;
-            cursor: pointer;
-            transition: color 0.2s;
-            border-bottom: 3px solid transparent;
-        }
-        .payout-tab.active {
-            color: #2563eb;
-            border-bottom-color: #2563eb;
-        }
-
-        .payout-content {
-            display: none;
-        }
-        .payout-content.active {
-            display: block;
-        }
-        
-        .history-table-container {
-            overflow-x: auto;
-        }
-        #history-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        #history-table th, #history-table td {
-            padding: 1rem;
-            text-align: left;
-            border-bottom: 1px solid #e5e7eb;
-        }
-        #history-table th {
-            background-color: #e5e7eb;
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 0.875rem;
-            color: #4b5563;
-        }
-        #history-table tbody tr:last-child td {
-            border-bottom: none;
-        }
-        .status-dot {
-            height: 10px;
-            width: 10px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 0.5rem;
-        }
-        .status-dot.success { background-color: #10b981; }
-        .status-dot.failed { background-color: #f87171; }
-        .status-dot.pending { background-color: #fcd34d; }
-
-        .mti-stream-container {
-            height: 400px;
-            overflow-y: scroll;
-            border: 1px solid #e5e7eb;
-            border-radius: 0.75rem;
-            padding: 1rem;
-            background-color: #1f2937;
-            color: #e5e7eb;
-            font-family: monospace;
-            font-size: 0.875rem;
-        }
-        .mti-message {
-            border-bottom: 1px dashed #4b5563;
-            padding: 0.5rem 0;
-        }
-        .mti-message:last-child {
-            border-bottom: none;
-        }
-        .mti-timestamp {
-            color: #9ca3af;
-            font-size: 0.75rem;
-        }
-        .mti-code {
-            font-weight: bold;
-            color: #fcd34d;
-        }
-        .mti-description {
-            color: #d1d5db;
-        }
-        
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0, 0, 0, 0.4);
-            justify-content: center;
-            align-items: center;
-        }
-        .modal-content {
-            background-color: #fefefe;
-            padding: 2rem;
-            border-radius: 1rem;
-            max-width: 500px;
-            width: 90%;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-        }
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #e5e7eb;
-            padding-bottom: 1rem;
-            margin-bottom: 1rem;
-        }
-        .close-modal {
-            color: #aaa;
-            font-size: 1.5rem;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .modal-footer {
-            display: flex;
-            justify-content: flex-end;
-            gap: 1rem;
-            margin-top: 1.5rem;
-        }
-        
-        #login-section {
-            max-width: 420px;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
 </head>
-<body class="flex items-center justify-center min-h-screen p-4">
-
-    <!-- Login Section - Initial view -->
-    <div id="login-section" class="terminal-container bg-white p-6 rounded-3xl w-full">
-        <h1 class="text-center text-3xl font-bold text-gray-800 mb-6">Terminal Login</h1>
-        <p class="text-center text-gray-600 mb-6">Enter your credentials to access the terminal.</p>
-        <div class="form-group">
-            <label for="merchant-id-input">Merchant ID</label>
-            <input type="text" id="merchant-id-input" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter Merchant ID">
-        </div>
-        <div class="form-group mt-4">
-            <label for="terminal-id-input">Terminal ID</label>
-            <input type="text" id="terminal-id-input" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter Terminal ID">
-        </div>
-        <div class="button-group justify-center">
-            <button id="login-btn" class="primary-btn w-full">Login</button>
-        </div>
-        <div id="login-message" class="text-center mt-4 text-sm text-red-500"></div>
-    </div>
-    
-    <!-- Main Terminal View - Initially hidden -->
-    <div id="main-terminal-view" class="terminal-container bg-white p-6 rounded-3xl w-full hidden">
-        <header class="flex justify-between items-center mb-6" style="grid-area: header;">
+<body>
+    <div class="terminal-container">
+        <header>
             <div class="logo">
-                <h1 class="text-2xl font-bold text-gray-800">Black Rock</h1>
-                <span class="text-sm text-gray-500">Payment Terminal</span>
+                <h1>Black Rock</h1>
+                <span class="subtitle">Payment Terminal</span>
             </div>
             <div class="status-indicator">
-                <span id="status-text" class="font-medium text-gray-600">OFFLINE</span>
-                <div id="status-light" class="status-light offline"></div>
+                <span id="status-text">ONLINE</span>
+                <div id="status-light" class="status-light online"></div>
             </div>
         </header>
         
-        <div class="main-content" style="grid-area: main;">
+        <div class="main-content">
             <div class="payment-form">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">Process Payment</h2>
+                <h2>Process Payment</h2>
                 
                 <div class="form-group">
                     <label for="amount">Amount</label>
                     <div class="input-with-icon">
                         <span class="currency-symbol">$</span>
-                        <input type="number" id="amount" step="0.01" min="0.01" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0.00">
+                        <input type="number" id="amount" step="0.01" min="0.01" placeholder="0.00">
                     </div>
                 </div>
                 
-                <div class="form-group mt-4">
+                <div class="form-group">
                     <label for="currency">Currency</label>
-                    <select id="currency" class="w-full px-4 py-2 border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select id="currency">
                         <option value="USD">USD - US Dollar</option>
                         <option value="EUR">EUR - Euro</option>
                     </select>
                 </div>
                 
-                <div class="form-group mt-4">
+                <div class="form-group">
                     <label for="card-number">Card Number</label>
-                    <input type="text" id="card-number" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="XXXX XXXX XXXX XXXX">
+                    <input type="text" id="card-number" placeholder="XXXX XXXX XXXX XXXX">
                 </div>
                 
-                <div class="form-row mt-4">
-                    <div class="form-group">
+                <div class="form-row">
+                    <div class="form-group half">
                         <label for="expiry">Expiry Date</label>
-                        <input type="text" id="expiry" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="MM/YY">
+                        <input type="text" id="expiry" placeholder="MM/YY">
                     </div>
-                    <div class="form-group">
+                    <div class="form-group half">
                         <label for="cvv">CVV</label>
-                        <input type="text" id="cvv" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="XXX">
+                        <input type="text" id="cvv" placeholder="XXX">
                     </div>
                 </div>
                 
-                <div class="form-group mt-4">
+                <div class="form-group">
                     <label for="cardholder">Cardholder Name</label>
-                    <input type="text" id="cardholder" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Name on card">
+                    <input type="text" id="cardholder" placeholder="Name on card">
                 </div>
                 
-                <div class="form-group mt-4">
+                <div class="form-group">
+                    <label for="postal-code">Postal/ZIP Code</label>
+                    <input type="text" id="postal-code" placeholder="Optional">
+                </div>
+                
+                <div class="form-group">
                     <label for="protocol">Protocol</label>
-                    <select id="protocol" class="w-full px-4 py-2 border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="">Select a Protocol</option>
-                        <option value="101.1">POS Terminal -101.1 (4-digit approval)</option>
-                        <option value="101.4">POS Terminal -101.4 (6-digit approval)</option>
-                        <option value="101.6">POS Terminal -101.6 (Pre-authorization)</option>
-                        <option value="101.7">POS Terminal -101.7 (4-digit approval)</option>
-                        <option value="101.8">POS Terminal -101.8 (PIN-LESS transaction)</option>
-                        <option value="201.1">POS Terminal -201.1 (6-digit approval)</option>
-                        <option value="201.3">POS Terminal -201.3 (6-digit approval)</option>
-                        <option value="201.5">POS Terminal -201.5 (6-digit approval)</option>
+                    <select id="protocol">
+                        <option value="POS Terminal -101.1 (4-digit approval)">POS Terminal -101.1 (4-digit approval)</option>
+                        <option value="POS Terminal -101.4 (6-digit approval)">POS Terminal -101.4 (6-digit approval)</option>
+                        <option value="POS Terminal -101.6 (Pre-authorization)">POS Terminal -101.6 (Pre-authorization)</option>
+                        <option value="POS Terminal -101.7 (4-digit approval)">POS Terminal -101.7 (4-digit approval)</option>
+                        <option value="POS Terminal -101.8 (PIN-LESS transaction)">POS Terminal -101.8 (PIN-LESS transaction)</option>
+                        <option value="POS Terminal -201.1 (6-digit approval)">POS Terminal -201.1 (6-digit approval)</option>
+                        <option value="POS Terminal -201.3 (6-digit approval)">POS Terminal -201.3 (6-digit approval)</option>
+                        <option value="POS Terminal -201.5 (6-digit approval)">POS Terminal -201.5 (6-digit approval)</option>
                     </select>
                 </div>
                 
-                <!-- New Auth Code field - Hidden by default -->
-                <div class="form-group mt-4" id="auth-code-container" style="display: none;">
+                <!-- New Auth Code field -->
+                <div class="form-group" id="auth-code-container">
                     <label for="auth-code">Auth Code</label>
-                    <input type="text" id="auth-code" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter auth code">
-                    <span class="auth-code-hint text-xs mt-1 text-gray-500">Required for this protocol</span>
+                    <input type="text" id="auth-code" placeholder="Enter auth code">
+                    <span class="auth-code-hint">Required for this protocol</span>
                 </div>
-
-                <div class="button-group mt-6">
-                    <button id="process-btn" class="primary-btn w-full">Process Payment</button>
-                    <button id="clear-btn" class="secondary-btn w-full">Clear</button>
+                
+                <div class="form-group">
+                    <label for="transaction-type">Transaction Type</label>
+                    <select id="transaction-type">
+                        <option value="SALE">Sale</option>
+                        <option value="REFUND">Refund</option>
+                        <option value="PRE_AUTH">Pre-Authorization</option>
+                        <option value="PRE_AUTH_COMPLETION">Pre-Auth Completion</option>
+                        <option value="BALANCE_INQUIRY">Balance Inquiry</option>
+                    </select>
+                </div>
+                
+                <div class="button-group">
+                    <button id="process-btn" class="primary-btn">Process Payment</button>
+                    <button id="clear-btn" class="secondary-btn">Clear</button>
                 </div>
             </div>
             
-            <div class="transaction-result bg-gray-50 rounded-xl p-6">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">Transaction Result</h2>
-                <div class="result-content bg-gray-200 rounded-lg p-4 mb-4 min-h-[100px] flex items-center justify-center">
-                    <p class="placeholder-text text-gray-500 italic">Transaction results will appear here</p>
+            <div class="transaction-result" id="transaction-result">
+                <h2>Transaction Result</h2>
+                <div class="result-content" id="result-content">
+                    <p class="placeholder-text">Transaction results will appear here</p>
                 </div>
                 <div class="button-group">
-                    <button id="print-btn" class="secondary-btn w-1/2" disabled>Print Receipt</button>
-                    <button id="void-btn" class="danger-btn w-1/2" disabled>Void Transaction</button>
+                    <button id="print-btn" class="secondary-btn" disabled>Print Receipt</button>
+                    <button id="void-btn" class="danger-btn" disabled>Void Transaction</button>
                 </div>
             </div>
         </div>
         
-        <!-- MTI Stream Section -->
-        <div class="mti-stream bg-gray-900 text-gray-200 rounded-3xl p-6 border border-gray-700" style="grid-area: mti-stream;">
-            <h2 class="text-xl font-bold text-gray-100 mb-4">Real-time MTI Stream</h2>
-            <div id="mti-stream-container" class="mti-stream-container">
-                <p class="text-gray-500 italic text-center">Waiting for messages...</p>
-            </div>
-        </div>
-
-        <div class="payout-settings bg-white rounded-3xl p-6 border border-gray-200" style="grid-area: payout;">
-            <h2 class="text-xl font-bold text-gray-800 mb-4">Payout Settings</h2>
-            <div class="payout-tabs flex mb-4 border-b border-gray-200">
-                <button class="payout-tab px-4 py-2 font-medium text-gray-600 hover:text-blue-600 border-b-2 border-transparent transition-colors duration-200 active">Bank Account</button>
-                <button class="payout-tab px-4 py-2 font-medium text-gray-600 hover:text-blue-600 border-b-2 border-transparent transition-colors duration-200">Cryptocurrency</button>
+        <!-- New Payout Settings Section -->
+        <div class="payout-settings">
+            <h2>Payout Settings</h2>
+            <div class="payout-tabs">
+                <button class="payout-tab active" data-tab="bank">Bank Account</button>
+                <button class="payout-tab" data-tab="crypto">Cryptocurrency</button>
             </div>
             
-            <div class="payout-content bank-content active">
-                <div class="form-group mt-4">
+            <div class="payout-content active" id="bank-payout">
+                <div class="form-group">
                     <label for="bank-name">Bank Name</label>
-                    <input type="text" id="bank-name" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter bank name">
+                    <input type="text" id="bank-name" placeholder="Enter bank name">
                 </div>
-                <div class="form-group mt-4">
+                <div class="form-group">
                     <label for="account-name">Account Name</label>
-                    <input type="text" id="account-name" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter account name">
+                    <input type="text" id="account-name" placeholder="Enter account name">
                 </div>
-                <div class="form-group mt-4">
+                <div class="form-group">
                     <label for="account-number">Account Number</label>
-                    <input type="text" id="account-number" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter account number">
+                    <input type="text" id="account-number" placeholder="Enter account number">
                 </div>
-                <div class="form-group mt-4">
+                <div class="form-group">
                     <label for="routing-number">Routing Number</label>
-                    <input type="text" id="routing-number" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter routing number">
+                    <input type="text" id="routing-number" placeholder="Enter routing number">
+                </div>
+                <div class="form-group">
+                    <label for="swift-code">SWIFT Code (International)</label>
+                    <input type="text" id="swift-code" placeholder="Optional">
+                </div>
+                <div class="form-group">
+                    <label for="iban">IBAN (International)</label>
+                    <input type="text" id="iban" placeholder="Optional">
                 </div>
                 <div class="button-group">
                     <button id="save-bank-btn" class="primary-btn">Save Bank Details</button>
                 </div>
             </div>
             
-            <div class="payout-content crypto-content hidden">
-                <div class="form-group mt-4">
+            <div class="payout-content" id="crypto-payout">
+                <div class="form-group">
                     <label for="crypto-currency">Cryptocurrency</label>
-                    <select id="crypto-currency" class="w-full px-4 py-2 border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select id="crypto-currency">
                         <option value="BTC">Bitcoin (BTC)</option>
                         <option value="ETH">Ethereum (ETH)</option>
                         <option value="USDT">Tether (USDT)</option>
+                        <option value="USDC">USD Coin (USDC)</option>
                     </select>
                 </div>
-                <div class="form-group mt-4">
+                <div class="form-group">
                     <label for="wallet-address">Wallet Address</label>
-                    <input type="text" id="wallet-address" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter wallet address">
+                    <input type="text" id="wallet-address" placeholder="Enter wallet address">
+                </div>
+                <div class="form-group">
+                    <label for="network">Network (for tokens)</label>
+                    <select id="network">
+                        <option value="">Not Applicable</option>
+                        <option value="ETH">Ethereum</option>
+                        <option value="BSC">Binance Smart Chain</option>
+                        <option value="POLYGON">Polygon</option>
+                        <option value="ARBITRUM">Arbitrum</option>
+                    </select>
                 </div>
                 <div class="button-group">
                     <button id="save-crypto-btn" class="primary-btn">Save Crypto Details</button>
@@ -465,33 +184,32 @@
             </div>
         </div>
         
-        <div class="transaction-history bg-white rounded-3xl p-6 border border-gray-200" style="grid-area: history;">
-            <h2 class="text-xl font-bold text-gray-800 mb-4">Recent Transactions</h2>
+        <div class="transaction-history">
+            <h2>Recent Transactions</h2>
             <div class="history-table-container">
-                <table id="history-table" class="w-full">
+                <table id="history-table">
                     <thead>
-                        <tr class="text-xs text-gray-500 uppercase">
-                            <th class="py-2 px-4">Time</th>
-                            <th class="py-2 px-4">Type</th>
-                            <th class="py-2 px-4">Amount</th>
-                            <th class="py-2 px-4">Status</th>
-                            <th class="py-2 px-4">Actions</th>
+                        <tr>
+                            <th>Time</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="history-body">
                         <tr class="placeholder-row">
-                            <td colspan="5" class="py-4 text-center text-gray-400 italic">No transactions yet</td>
+                            <td colspan="5">No transactions yet</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </div>
         
-        <footer class="flex justify-between items-center text-xs text-gray-500 mt-4" style="grid-area: footer;">
+        <footer>
             <div class="terminal-info">
-                <span>Terminal ID: <span id="terminal-id" class="font-bold text-gray-700">--</span></span>
-                <span class="mx-2">|</span>
-                <span>Merchant ID: <span id="merchant-id" class="font-bold text-gray-700">--</span></span>
+                <span>Terminal ID: <span id="terminal-id">--</span></span>
+                <span>Merchant ID: <span id="merchant-id">--</span></span>
             </div>
             <div class="version-info">
                 <span>Black Rock Payment Terminal v1.0</span>
@@ -503,519 +221,19 @@
     <div class="modal" id="receipt-modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="text-xl font-bold text-gray-800">Receipt</h2>
+                <h2>Receipt</h2>
                 <span class="close-modal">&times;</span>
             </div>
-            <div class="modal-body p-4 bg-gray-100 rounded-lg" id="receipt-container">
-                <!-- Receipt details will be injected here -->
+            <div class="modal-body">
+                <div id="receipt-container"></div>
             </div>
             <div class="modal-footer">
-                <button id="print-receipt-btn" class="secondary-btn">Print</button>
+                <button id="print-receipt-btn" class="primary-btn">Print</button>
                 <button id="close-receipt-btn" class="secondary-btn">Close</button>
             </div>
         </div>
     </div>
     
-    <script>
-        // Get references to all the new and updated DOM elements
-        const loginSection = document.getElementById('login-section');
-        const mainTerminalView = document.getElementById('main-terminal-view');
-        const merchantIdInput = document.getElementById('merchant-id-input');
-        const terminalIdInput = document.getElementById('terminal-id-input');
-        const loginButton = document.getElementById('login-btn');
-        const loginMessage = document.getElementById('login-message');
-    
-        const statusLight = document.getElementById('status-light');
-        const statusText = document.getElementById('status-text');
-        const footerTerminalId = document.getElementById('terminal-id');
-        const footerMerchantId = document.getElementById('merchant-id');
-    
-        const processButton = document.getElementById('process-btn');
-        const clearButton = document.getElementById('clear-btn');
-        const amountInput = document.getElementById('amount');
-        const protocolSelect = document.getElementById('protocol');
-        const authCodeContainer = document.getElementById('auth-code-container');
-        const authCodeInput = document.getElementById('auth-code');
-        const transactionResultContent = document.querySelector('#main-terminal-view .transaction-result .result-content');
-        const printButton = document.getElementById('print-btn');
-        const voidButton = document.getElementById('void-btn');
-    
-        const payoutTabs = document.querySelectorAll('.payout-tab');
-        const payoutContents = document.querySelectorAll('.payout-content');
-        const saveBankButton = document.getElementById('save-bank-btn');
-        const saveCryptoButton = document.getElementById('save-crypto-btn');
-    
-        const historyBody = document.getElementById('history-body');
-    
-        const receiptModal = document.getElementById('receipt-modal');
-        const receiptContainer = document.getElementById('receipt-container');
-        const closeModalButtons = document.querySelectorAll('.close-modal');
-        const printReceiptButton = document.getElementById('print-receipt-btn');
-        const closeReceiptButton = document.getElementById('close-receipt-btn');
-    
-        const mtiStreamSection = document.querySelector('.mti-stream');
-        const mtiStreamContainer = document.getElementById('mti-stream-container');
-    
-        let transactionHistory = [];
-        let currentTransaction = null;
-        let mtiStreamInterval = null;
-
-        /**
-         * The correct API endpoint for the backend.
-         * This needs to be the URL of your deployed backend service.
-         */
-        const API_ENDPOINT = 'https://be-vezt.onrender.com';
-    
-        // --- Utility Functions ---
-    
-        /**
-         * Utility function to display a message in the transaction result box.
-         * @param {string} message The message to display.
-         * @param {string} type The type of message ('success', 'error', 'info').
-         */
-        function showTransactionResult(message, type = 'info') {
-            transactionResultContent.innerHTML = `<p class="font-medium">${message}</p>`;
-            // Reset colors
-            transactionResultContent.classList.remove('text-green-700', 'text-red-700', 'text-gray-600', 'bg-green-100', 'bg-red-100', 'bg-gray-100');
-            // Set new colors
-            if (type === 'success') {
-                transactionResultContent.classList.add('bg-green-100', 'text-green-700');
-            } else if (type === 'error') {
-                transactionResultContent.classList.add('bg-red-100', 'text-red-700');
-            } else {
-                transactionResultContent.classList.add('bg-gray-100', 'text-gray-600');
-            }
-        }
-
-        /**
-         * Function to display non-alert messages to the user.
-         * @param {string} message The message to show.
-         */
-        function showUserMessage(message) {
-            const messageBox = document.getElementById('login-message');
-            messageBox.textContent = message;
-        }
-    
-        /**
-         * Utility function to update the terminal's status display.
-         * @param {string} newStatus The new status ('ONLINE', 'OFFLINE', 'PENDING').
-         */
-        function updateStatus(newStatus) {
-            statusLight.classList.remove('online', 'offline', 'pending');
-            statusText.textContent = newStatus.toUpperCase();
-            statusLight.classList.add(newStatus.toLowerCase());
-        }
-    
-        /**
-         * Adds a new transaction to the history table and updates the display.
-         * @param {object} transaction The transaction object.
-         */
-        function addTransactionToHistory(transaction) {
-            const placeholderRow = document.querySelector('.placeholder-row');
-            if (placeholderRow) {
-                placeholderRow.remove();
-            }
-            
-            const newRow = document.createElement('tr');
-            newRow.innerHTML = `
-                <td class="py-2 px-4">${transaction.time}</td>
-                <td class="py-2 px-4">${transaction.type}</td>
-                <td class="py-2 px-4">$${parseFloat(transaction.amount).toFixed(2)}</td>
-                <td class="py-2 px-4">
-                    <span class="status-dot ${transaction.status}"></span>
-                    ${transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1).replace('_', ' ')}
-                </td>
-                <td class="py-2 px-4">
-                    <button class="secondary-btn view-receipt-btn text-xs px-2 py-1">View Receipt</button>
-                    ${transaction.status === 'success' ? `<button class="danger-btn void-transaction-btn text-xs px-2 py-1 ml-2">Void</button>` : ''}
-                </td>
-            `;
-            historyBody.prepend(newRow);
-            transactionHistory.unshift(transaction);
-        }
-    
-        /**
-         * Creates and displays a receipt in the modal.
-         * @param {object} transaction The transaction to display on the receipt.
-         */
-        function showReceipt(transaction) {
-            const receiptHTML = `
-                <h3 class="text-center font-bold text-lg mb-2">Black Rock Payment Receipt</h3>
-                <p class="text-center text-sm mb-4">Date: ${transaction.date}</p>
-                <p class="text-sm">Merchant ID: ${transaction.merchantId}</p>
-                <p class="text-sm">Terminal ID: ${transaction.terminalId}</p>
-                <hr class="my-2 border-gray-300">
-                <p class="text-sm">Transaction ID: ${transaction.transactionId}</p>
-                <p class="text-sm">Cardholder: ${transaction.cardholder}</p>
-                <p class="text-sm">Card: **** **** **** ${transaction.last4}</p>
-                <p class="text-sm">Protocol: ${transaction.protocol}</p>
-                <hr class="my-2 border-gray-300">
-                <p class="text-sm">Amount: $${parseFloat(transaction.amount).toFixed(2)}</p>
-                <p class="text-sm">Type: ${transaction.type}</p>
-                <p class="text-sm font-bold">Status: ${transaction.status.toUpperCase().replace('_', ' ')}</p>
-            `;
-            receiptContainer.innerHTML = receiptHTML;
-            receiptModal.style.display = 'flex';
-        }
-    
-        /**
-         * Adds a new MTI message to the real-time stream.
-         * @param {string} mtiCode The ISO 8583 MTI code.
-         * @param {string} description A description of the message.
-         */
-        function addMTI(mtiCode, description) {
-            const messageElement = document.createElement('div');
-            messageElement.classList.add('mti-message');
-            messageElement.innerHTML = `
-                <span class="mti-timestamp">[${new Date().toLocaleTimeString()}]</span> 
-                <span class="mti-code">${mtiCode}</span>: 
-                <span class="mti-description">${description}</span>
-            `;
-            const placeholder = mtiStreamContainer.querySelector('p');
-            if (placeholder) {
-                placeholder.remove();
-            }
-            mtiStreamContainer.prepend(messageElement);
-            if (mtiStreamContainer.children.length > 20) {
-                mtiStreamContainer.lastChild.remove();
-            }
-        }
-    
-        /**
-         * Simulates a real-time stream of MTI messages.
-         */
-        function startMTIStreamSimulation() {
-            mtiStreamContainer.innerHTML = '<p class="text-gray-500 italic text-center">Waiting for messages...</p>';
-            
-            mtiStreamInterval = setInterval(() => {
-                const messages = [
-                    { code: '0800', desc: 'Network Management Request' },
-                    { code: '0810', desc: 'Network Management Response' },
-                    { code: '0420', desc: 'Reversal Request' },
-                    { code: '0430', desc: 'Reversal Response' },
-                    { code: '0100', desc: 'Authorization Request' },
-                    { code: '0110', desc: 'Authorization Response' }
-                ];
-                const randomMessage = messages[Math.floor(Math.random() * messages.length)];
-                addMTI(randomMessage.code, randomMessage.desc);
-            }, 5000);
-        }
-    
-        // --- Event Handlers ---
-    
-        /**
-         * Handles the login button click.
-         */
-        loginButton.addEventListener('click', () => {
-            const merchantId = merchantIdInput.value.trim();
-            const terminalId = terminalIdInput.value.trim();
-    
-            if (merchantId && terminalId) {
-                loginSection.classList.add('hidden');
-                mainTerminalView.classList.remove('hidden');
-                footerMerchantId.textContent = merchantId;
-                footerTerminalId.textContent = terminalId;
-                updateStatus('ONLINE');
-                showUserMessage('');
-                startMTIStreamSimulation();
-            } else {
-                showUserMessage('Please enter both Merchant ID and Terminal ID.');
-            }
-        });
-    
-        /**
-         * Handles the payment process.
-         */
-        processButton.addEventListener('click', async () => {
-            const amount = parseFloat(amountInput.value);
-            const cardholder = document.getElementById('cardholder').value.trim();
-            const cardNumber = document.getElementById('card-number').value.trim();
-            const protocol = protocolSelect.value;
-            
-            if (isNaN(amount) || amount <= 0) {
-                showTransactionResult('Please enter a valid amount.', 'error');
-                return;
-            }
-            if (!cardholder || !cardNumber) {
-                showTransactionResult('Cardholder name and number are required.', 'error');
-                return;
-            }
-            if (!protocol) {
-                showTransactionResult('Please select a protocol.', 'error');
-                return;
-            }
-            
-            const requiredProtocols = ['101.1', '101.4', '101.7', '201.1', '201.3', '201.5'];
-            if (requiredProtocols.includes(protocol)) {
-                if (!authCodeInput.value.trim()) {
-                    showTransactionResult('Auth code is required for this protocol.', 'error');
-                    return;
-                }
-            }
-    
-            showTransactionResult('Processing payment...', 'info');
-            updateStatus('PENDING');
-            
-            processButton.disabled = true;
-            clearButton.disabled = true;
-    
-            addMTI('0100', 'Sending Authorization Request...');
-    
-            const paymentPayload = {
-                amount: amount,
-                currency: 'USD',
-                cardholder: cardholder,
-                cardNumber: cardNumber,
-                protocol: protocol,
-                authCode: authCodeInput.value.trim(),
-            };
-    
-            try {
-                const response = await fetch(`${API_ENDPOINT}/api/payments`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(paymentPayload),
-                });
-    
-                const result = await response.json();
-    
-                if (response.ok && result.status === 'success') {
-                    addMTI('0210', 'Authorization Response received (Approved)');
-                    showTransactionResult(`Payment successful! Transaction ID: ${result.transactionId}`, 'success');
-                    updateStatus('ONLINE');
-                    currentTransaction = {
-                        id: result.transactionId,
-                        amount: amount,
-                        type: 'Sale',
-                        status: 'success',
-                        time: new Date().toLocaleTimeString(),
-                        date: new Date().toLocaleDateString(),
-                        merchantId: footerMerchantId.textContent,
-                        terminalId: footerTerminalId.textContent,
-                        cardholder: cardholder,
-                        last4: cardNumber.slice(-4),
-                        protocol: protocol,
-                    };
-                    addTransactionToHistory(currentTransaction);
-                    printButton.disabled = false;
-                    voidButton.disabled = false;
-                } else {
-                    addMTI('0210', 'Authorization Response received (Declined)');
-                    showTransactionResult(`Payment failed: ${result.message}`, 'error');
-                    updateStatus('ONLINE');
-                    currentTransaction = {
-                        id: result.transactionId || 'N/A',
-                        amount: amount,
-                        type: 'Sale',
-                        status: 'failed',
-                        time: new Date().toLocaleTimeString(),
-                        date: new Date().toLocaleDateString(),
-                        merchantId: footerMerchantId.textContent,
-                        terminalId: footerTerminalId.textContent,
-                        cardholder: cardholder,
-                        last4: cardNumber.slice(-4),
-                        protocol: protocol,
-                    };
-                    addTransactionToHistory(currentTransaction);
-                    printButton.disabled = true;
-                    voidButton.disabled = true;
-                }
-            } catch (error) {
-                console.error('Network Error:', error);
-                addMTI('0210', 'Authorization Response failed (Timeout)');
-                showTransactionResult('A network error occurred. Please try again.', 'error');
-                updateStatus('OFFLINE');
-            } finally {
-                processButton.disabled = false;
-                clearButton.disabled = false;
-            }
-        });
-    
-        /**
-         * Handles the clear button click.
-         */
-        clearButton.addEventListener('click', () => {
-            amountInput.value = '';
-            document.getElementById('card-number').value = '';
-            document.getElementById('expiry').value = '';
-            document.getElementById('cvv').value = '';
-            document.getElementById('cardholder').value = '';
-            document.getElementById('protocol').value = '';
-            authCodeInput.value = '';
-            authCodeContainer.style.display = 'none';
-            showTransactionResult('Enter payment details to begin.', 'info');
-            printButton.disabled = true;
-            voidButton.disabled = true;
-        });
-    
-        /**
-         * Handles the protocol dropdown change event to show/hide the auth code field.
-         */
-        protocolSelect.addEventListener('change', () => {
-            const protocolValue = protocolSelect.value;
-            const requiredProtocols = ['101.1', '101.4', '101.7', '201.1', '201.3', '201.5'];
-            if (requiredProtocols.includes(protocolValue)) {
-                authCodeContainer.style.display = 'block';
-                if (protocolValue === '101.1' || protocolValue === '101.7') {
-                    authCodeInput.placeholder = '4-digit code';
-                    authCodeInput.setAttribute('maxlength', '4');
-                } else {
-                    authCodeInput.placeholder = '6-digit code';
-                    authCodeInput.setAttribute('maxlength', '6');
-                }
-            } else {
-                authCodeContainer.style.display = 'none';
-                authCodeInput.value = '';
-            }
-        });
-    
-        /**
-         * Handles the payout tabs click event.
-         */
-        payoutTabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                payoutTabs.forEach(t => t.classList.remove('active'));
-                payoutContents.forEach(c => c.classList.remove('active'));
-                payoutContents.forEach(c => c.classList.add('hidden'));
-
-                tab.classList.add('active');
-                const contentClass = tab.textContent.toLowerCase().replace(' ', '-') + '-content';
-                const correspondingContent = document.querySelector(`.${contentClass}`);
-                correspondingContent.classList.remove('hidden');
-                correspondingContent.classList.add('active');
-            });
-        });
-    
-        /**
-         * Handles saving bank details and triggers a payout confirmation.
-         */
-        saveBankButton.addEventListener('click', () => {
-            const bankDetails = {
-                bankName: document.getElementById('bank-name').value,
-                accountName: document.getElementById('account-name').value,
-                accountNumber: document.getElementById('account-number').value,
-                routingNumber: document.getElementById('routing-number').value
-            };
-            console.log('Saving Bank Details:', bankDetails);
-            
-            addMTI('0220', 'Payout trigger sent for Bank Transfer');
-            showUserMessage('Bank details saved. Awaiting payout confirmation...');
-            
-            setTimeout(() => {
-                addMTI('0230', 'Payout Confirmation received for Bank Transfer');
-                showUserMessage('Payout for Bank Transfer confirmed successfully!');
-            }, 3000);
-        });
-    
-        /**
-         * Handles saving crypto details and triggers a payout confirmation.
-         */
-        saveCryptoButton.addEventListener('click', () => {
-            const cryptoDetails = {
-                currency: document.getElementById('crypto-currency').value,
-                walletAddress: document.getElementById('wallet-address').value
-            };
-            console.log('Saving Crypto Details:', cryptoDetails);
-    
-            addMTI('0220', 'Payout trigger sent for Crypto Transfer');
-            showUserMessage('Crypto details saved. Awaiting payout confirmation...');
-            
-            setTimeout(() => {
-                addMTI('0230', 'Payout Confirmation received for Crypto Transfer');
-                showUserMessage('Payout for Crypto Transfer confirmed successfully!');
-            }, 3000);
-        });
-    
-        /**
-         * Handles showing the receipt modal.
-         */
-        printButton.addEventListener('click', () => {
-            if (currentTransaction) {
-                showReceipt(currentTransaction);
-            }
-        });
-    
-        /**
-         * Handles closing the receipt modal.
-         */
-        closeModalButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                receiptModal.style.display = 'none';
-            });
-        });
-    
-        /**
-         * Handles the 'Print' button inside the receipt modal (simulated).
-         */
-        printReceiptButton.addEventListener('click', () => {
-            window.print();
-        });
-    
-        /**
-         * Handles the 'Void Transaction' button (simulated).
-         */
-        voidButton.addEventListener('click', () => {
-            if (currentTransaction && currentTransaction.status === 'success') {
-                console.log(`Attempting to void transaction ID: ${currentTransaction.id}`);
-                addMTI('0420', 'Reversal Request sent...');
-                showUserMessage(`Sending void request for transaction ${currentTransaction.id}...`);
-
-                setTimeout(() => {
-                    currentTransaction.status = 'failed';
-                    currentTransaction.type = 'Void';
-                    showTransactionResult(`Transaction ${currentTransaction.id} voided successfully.`, 'info');
-                    updateStatus('ONLINE');
-                    printButton.disabled = true;
-                    voidButton.disabled = true;
-                    addMTI('0430', 'Reversal Response received (Approved)');
-                    showUserMessage(`Transaction ${currentTransaction.id} has been voided.`);
-                }, 2000);
-            }
-        });
-    
-        // Event delegation for dynamically added history table buttons
-        historyBody.addEventListener('click', (event) => {
-            const target = event.target;
-            const row = target.closest('tr');
-            if (!row) return;
-    
-            const transactionId = row.querySelector('td:nth-child(1)').textContent;
-    
-            if (target.classList.contains('view-receipt-btn')) {
-                const transaction = transactionHistory.find(t => t.id === transactionId);
-                if (transaction) {
-                    showReceipt(transaction);
-                }
-            } else if (target.classList.contains('void-transaction-btn')) {
-                const transaction = transactionHistory.find(t => t.id === transactionId);
-                if (transaction) {
-                    transaction.status = 'failed';
-                    showUserMessage(`Transaction ${transaction.id} has been voided.`);
-                    row.querySelector('.status-dot').classList.remove('success');
-                    row.querySelector('.status-dot').classList.add('failed');
-                    row.querySelector('td:nth-child(4)').innerHTML = `<span class="status-dot failed"></span>Failed`;
-                    target.remove();
-                }
-            }
-        });
-
-        // Initialize state on page load
-        document.addEventListener('DOMContentLoaded', () => {
-            // Hide the main view and show the login section
-            mainTerminalView.classList.add('hidden');
-            loginSection.classList.remove('hidden');
-            // Clear any previous inputs
-            document.getElementById('amount').value = '';
-            document.getElementById('card-number').value = '';
-            document.getElementById('expiry').value = '';
-            document.getElementById('cvv').value = '';
-            document.getElementById('cardholder').value = '';
-            document.getElementById('protocol').value = '';
-            document.getElementById('auth-code').value = '';
-            document.getElementById('auth-code-container').style.display = 'none';
-        });
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>
