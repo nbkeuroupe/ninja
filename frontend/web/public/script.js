@@ -1,466 +1,787 @@
-// Get references to all the new and updated DOM elements
-const loginSection = document.getElementById('login-section');
-const mainTerminalView = document.getElementById('main-terminal-view');
-const merchantIdInput = document.getElementById('merchant-id-input');
-const terminalIdInput = document.getElementById('terminal-id-input');
-const loginButton = document.getElementById('login-btn');
-const loginMessage = document.getElementById('login-message');
+document.addEventListener('DOMContentLoaded', function() {
+    // Elements
+    const statusText = document.getElementById('status-text');
+    const statusLight = document.getElementById('status-light');
+    const terminalIdEl = document.getElementById('terminal-id');
+    const merchantIdEl = document.getElementById('merchant-id');
 
-const statusLight = document.getElementById('status-light');
-const statusText = document.getElementById('status-text');
-const footerTerminalId = document.getElementById('terminal-id');
-const footerMerchantId = document.getElementById('merchant-id');
+    const amountInput = document.getElementById('amount');
+    const currencySelect = document.getElementById('currency');
+    const cardNumberInput = document.getElementById('card-number');
+    const expiryInput = document.getElementById('expiry');
+    const cvvInput = document.getElementById('cvv');
+    const cardholderInput = document.getElementById('cardholder');
+    const postalCodeInput = document.getElementById('postal-code');
+    const protocolSelect = document.getElementById('protocol');
+    const authCodeInput = document.getElementById('auth-code');
+    const authCodeContainer = document.getElementById('auth-code-container');
+    const authCodeHint = document.querySelector('.auth-code-hint');
+    const transactionTypeSelect = document.getElementById('transaction-type');
 
-const processButton = document.getElementById('process-btn');
-const clearButton = document.getElementById('clear-btn');
-const amountInput = document.getElementById('amount');
-const protocolSelect = document.getElementById('protocol');
-const authCodeContainer = document.getElementById('auth-code-container');
-const authCodeInput = document.getElementById('auth-code');
-const transactionResultContent = document.getElementById('result-content');
-const printButton = document.getElementById('print-btn');
-const voidButton = document.getElementById('void-btn');
+    const processBtn = document.getElementById('process-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const printBtn = document.getElementById('print-btn');
+    const voidBtn = document.getElementById('void-btn');
 
-const payoutTabs = document.querySelectorAll('.payout-tab');
-const payoutContents = document.querySelectorAll('.payout-content');
-const saveBankButton = document.getElementById('save-bank-btn');
-const saveCryptoButton = document.getElementById('save-crypto-btn');
+    const resultContent = document.getElementById('result-content');
+    const historyBody = document.getElementById('history-body');
 
-const historyBody = document.getElementById('history-body');
+    const receiptModal = document.getElementById('receipt-modal');
+    const closeModalBtn = document.querySelector('.close-modal');
+    const receiptContainer = document.getElementById('receipt-container');
+    const printReceiptBtn = document.getElementById('print-receipt-btn');
+    const closeReceiptBtn = document.getElementById('close-receipt-btn');
 
-const receiptModal = document.getElementById('receipt-modal');
-const receiptContainer = document.getElementById('receipt-container');
-const closeModalButtons = document.querySelectorAll('.close-modal');
-const printReceiptButton = document.getElementById('print-receipt-btn');
-const closeReceiptButton = document.getElementById('close-receipt-btn');
+    // Payout settings elements
+    const payoutTabs = document.querySelectorAll('.payout-tab');
+    const payoutContents = document.querySelectorAll('.payout-content');
+    const saveBankBtn = document.getElementById('save-bank-btn');
+    const saveCryptoBtn = document.getElementById('save-crypto-btn');
 
-const mtiStreamSection = document.querySelector('.mti-stream');
-const mtiStreamContainer = document.getElementById('mti-stream-container');
+    // Terminal state
+    let terminalStatus = {
+        online: true,
+        merchantId: '',
+        terminalId: '',
+        currentTransactionId: null
+    };
 
-let transactionHistory = [];
-let currentTransaction = null;
-let mtiStreamInterval = null;
+    // Protocol definitions - Removed `is_onledger` flag entirely
+    const PROTOCOLS = {
+        "POS Terminal -101.1 (4-digit approval)": { approval_length: 4 },
+        "POS Terminal -101.4 (6-digit approval)": { approval_length: 6 },
+        "POS Terminal -101.6 (Pre-authorization)": { approval_length: 6 },
+        "POS Terminal -101.7 (4-digit approval)": { approval_length: 4 },
+        "POS Terminal -101.8 (PIN-LESS transaction)": { approval_length: 4 },
+        "POS Terminal -201.1 (6-digit approval)": { approval_length: 6 },
+        "POS Terminal -201.3 (6-digit approval)": { approval_length: 6 },
+        "POS Terminal -201.5 (6-digit approval)": { approval_length: 6 }
+    };
 
-// --- Utility Functions ---
+    // Format inputs
+    cardNumberInput.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        let formattedValue = '';
 
-/**
- * Utility function to display a message in the transaction result box.
- * @param {string} message The message to display.
- * @param {string} type The type of message ('success', 'error', 'info').
- */
-function showTransactionResult(message, type = 'info') {
-    transactionResultContent.innerHTML = `<p>${message}</p>`;
-    if (type === 'success') {
-        transactionResultContent.style.color = '#10b981';
-    } else if (type === 'error') {
-        transactionResultContent.style.color = '#ef4444';
-    } else {
-        transactionResultContent.style.color = '#4b5563';
+        for (let i = 0; i < value.length; i++) {
+            if (i > 0 && i % 4 === 0) {
+                formattedValue += ' ';
+            }
+            formattedValue += value[i];
+        }
+
+        e.target.value = formattedValue.substring(0, 19); // 16 digits + 3 spaces
+    });
+
+    expiryInput.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+
+        if (value.length > 2) {
+            value = value.substring(0, 2) + '/' + value.substring(2, 4);
+        }
+
+        e.target.value = value;
+    });
+
+    cvvInput.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        e.target.value = value.substring(0, 3);
+    });
+
+    // Auth code validation based on protocol
+    protocolSelect.addEventListener('change', updateAuthCodeRequirements);
+
+    // Corrected `updateAuthCodeRequirements` to work without `is_onledger`
+    function updateAuthCodeRequirements() {
+        const selectedProtocol = protocolSelect.value;
+        const protocolConfig = PROTOCOLS[selectedProtocol];
+
+        console.log('Selected protocol:', selectedProtocol);
+        console.log('Protocol config:', protocolConfig);
+
+        if (protocolConfig) {
+            // Show auth code field
+            authCodeContainer.style.display = 'block';
+            authCodeHint.style.display = 'block';
+            
+            // Corrected hint text to only mention "digits"
+            authCodeHint.textContent = `Required: ${protocolConfig.approval_length} digits`;
+
+            // Set max length attribute
+            authCodeInput.setAttribute('maxlength', protocolConfig.approval_length);
+
+            // Set placeholder to only mention "digits"
+            const placeholder = `Enter ${protocolConfig.approval_length}-digit code`;
+            authCodeInput.placeholder = placeholder;
+
+            // Clear existing value if it doesn't match new requirements
+            const currentValue = authCodeInput.value;
+            if (currentValue.length !== protocolConfig.approval_length) {
+                authCodeInput.value = '';
+            }
+        } else {
+            // Hide auth code field if no protocol config found
+            authCodeContainer.style.display = 'none';
+            authCodeHint.style.display = 'none';
+        }
     }
-}
 
-/**
- * Utility function to update the terminal's status display.
- * @param {string} newStatus The new status ('ONLINE', 'OFFLINE', 'PENDING').
- */
-function updateStatus(newStatus) {
-    statusLight.classList.remove('online', 'offline', 'pending');
-    statusText.textContent = newStatus.toUpperCase();
-    statusLight.classList.add(newStatus.toLowerCase());
-}
+    // Initialize auth code field
+    updateAuthCodeRequirements();
 
-/**
- * Adds a new transaction to the history table and updates the display.
- * @param {object} transaction The transaction object.
- */
-function addTransactionToHistory(transaction) {
-    const placeholderRow = document.querySelector('.placeholder-row');
-    if (placeholderRow) {
-        placeholderRow.remove();
-    }
-    
-    const newRow = document.createElement('tr');
-    newRow.innerHTML = `
-        <td class="py-2 px-4">${transaction.time}</td>
-        <td class="py-2 px-4">${transaction.type}</td>
-        <td class="py-2 px-4">$${transaction.amount.toFixed(2)}</td>
-        <td class="py-2 px-4">
-            <span class="status-dot ${transaction.status}"></span>
-            ${transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
-        </td>
-        <td class="py-2 px-4">
-            <button class="secondary-btn view-receipt-btn text-xs px-2 py-1">View Receipt</button>
-            ${transaction.status === 'success' ? `<button class="danger-btn void-transaction-btn text-xs px-2 py-1 ml-2">Void</button>` : ''}
-        </td>
-    `;
-    historyBody.prepend(newRow);
-    transactionHistory.unshift(transaction);
-}
+    // Auth code input validation - Corrected to be digits-only for all protocols
+    authCodeInput.addEventListener('input', function(e) {
+        const selectedProtocol = protocolSelect.value;
+        const protocolConfig = PROTOCOLS[selectedProtocol];
 
-/**
- * Creates and displays a receipt in the modal.
- * @param {object} transaction The transaction to display on the receipt.
- */
-function showReceipt(transaction) {
-    const receiptHTML = `
-        <h3 class="text-center font-bold text-lg mb-2">Black Rock Payment Receipt</h3>
-        <p class="text-center text-sm mb-4">Date: ${transaction.date}</p>
-        <p class="text-sm">Merchant ID: ${transaction.merchantId}</p>
-        <p class="text-sm">Terminal ID: ${transaction.terminalId}</p>
-        <hr class="my-2 border-gray-300">
-        <p class="text-sm">Transaction ID: ${transaction.transactionId}</p>
-        <p class="text-sm">Cardholder: ${transaction.cardholder}</p>
-        <p class="text-sm">Card: **** **** **** ${transaction.last4}</p>
-        <p class="text-sm">Protocol: ${transaction.protocol}</p>
-        <hr class="my-2 border-gray-300">
-        <p class="text-sm">Amount: $${transaction.amount.toFixed(2)}</p>
-        <p class="text-sm">Type: ${transaction.type}</p>
-        <p class="text-sm font-bold">Status: ${transaction.status.toUpperCase()}</p>
-    `;
-    receiptContainer.innerHTML = receiptHTML;
-    receiptModal.style.display = 'flex';
-}
+        if (protocolConfig) {
+            let value = e.target.value;
 
-/**
- * Adds a new MTI message to the real-time stream.
- * @param {string} mtiCode The ISO 8583 MTI code.
- * @param {string} description A description of the message.
- */
-function addMTI(mtiCode, description) {
-    const messageElement = document.createElement('div');
-    messageElement.classList.add('mti-message');
-    messageElement.innerHTML = `
-        <span class="mti-timestamp">[${new Date().toLocaleTimeString()}]</span> 
-        <span class="mti-code">${mtiCode}</span>: 
-        <span class="mti-description">${description}</span>
-    `;
-    const placeholder = mtiStreamContainer.querySelector('p');
-    if (placeholder) {
-        placeholder.remove();
-    }
-    mtiStreamContainer.prepend(messageElement);
-    if (mtiStreamContainer.children.length > 20) {
-        mtiStreamContainer.lastChild.remove();
-    }
-}
+            // Always restrict to digits only
+            value = value.replace(/\D/g, ''); 
 
-/**
- * Simulates a real-time stream of MTI messages.
- */
-function startMTIStreamSimulation() {
-    mtiStreamContainer.innerHTML = '<p class="text-gray-500 italic text-center">Waiting for messages...</p>';
-    
-    mtiStreamInterval = setInterval(() => {
-        const messages = [
-            { code: '0800', desc: 'Network Management Request' },
-            { code: '0810', desc: 'Network Management Response' },
-            { code: '0420', desc: 'Reversal Request' },
-            { code: '0430', desc: 'Reversal Response' },
-            { code: '0100', desc: 'Authorization Request' },
-            { code: '0110', desc: 'Authorization Response' }
-        ];
-        const randomMessage = messages[Math.floor(Math.random() * messages.length)];
-        addMTI(randomMessage.code, randomMessage.desc);
-    }, 5000);
-}
+            // Limit length
+            value = value.substring(0, protocolConfig.approval_length);
+            e.target.value = value;
 
-// --- Event Handlers ---
+            // Visual feedback for valid input
+            if (value.length === protocolConfig.approval_length) {
+                e.target.style.borderColor = '#2ecc71';
+                e.target.style.backgroundColor = '#f8fff8';
+            } else {
+                e.target.style.borderColor = '#e74c3c';
+                e.target.style.backgroundColor = '#fff8f8';
+            }
+        }
+    });
 
-/**
- * Handles the login button click.
- */
-loginButton.addEventListener('click', () => {
-    const merchantId = merchantIdInput.value.trim();
-    const terminalId = terminalIdInput.value.trim();
+    // Process payment
+    processBtn.addEventListener('click', function() {
+        console.log('Process button clicked');
 
-    if (merchantId && terminalId) {
-        loginSection.classList.add('hidden');
-        mainTerminalView.classList.remove('hidden');
-        footerMerchantId.textContent = merchantId;
-        footerTerminalId.textContent = terminalId;
-        updateStatus('ONLINE');
-        loginMessage.textContent = '';
-        startMTIStreamSimulation();
-    } else {
-        loginMessage.textContent = 'Please enter both Merchant ID and Terminal ID.';
-    }
-});
-
-/**
- * Handles the payment process.
- */
-processButton.addEventListener('click', async () => {
-    const amount = parseFloat(amountInput.value);
-    const cardholder = document.getElementById('cardholder').value.trim();
-    const cardNumber = document.getElementById('card-number').value.trim();
-    const protocol = protocolSelect.value;
-    
-    if (isNaN(amount) || amount <= 0) {
-        showTransactionResult('Please enter a valid amount.', 'error');
-        return;
-    }
-    if (!cardholder || !cardNumber) {
-        showTransactionResult('Cardholder name and number are required.', 'error');
-        return;
-    }
-    if (!protocol) {
-        showTransactionResult('Please select a protocol.', 'error');
-        return;
-    }
-    
-    const requiredProtocols = ['101.1', '101.4', '101.7', '201.1', '201.3', '201.5'];
-    if (requiredProtocols.includes(protocol)) {
-        if (!authCodeInput.value.trim()) {
-            showTransactionResult('Auth code is required for this protocol.', 'error');
+        // Validate inputs
+        if (!validateInputs()) {
             return;
         }
-    }
 
-    showTransactionResult('Processing payment...', 'info');
-    updateStatus('PENDING');
-    
-    processButton.disabled = true;
-    clearButton.disabled = true;
+        console.log('Validation passed, processing payment...');
 
-    addMTI('0100', 'Sending Authorization Request...');
+        // Show processing state
+        processBtn.disabled = true;
+        processBtn.textContent = 'Processing...';
 
-    const API_ENDPOINT = 'https://be-vezt.onrender.com/api/payments';
-    
-    const paymentPayload = {
-        amount: amount,
-        currency: 'USD',
-        cardholder: cardholder,
-        cardNumber: cardNumber,
-        protocol: protocol,
-        authCode: authCodeInput.value.trim(),
-    };
+        // Prepare payment data
+        const paymentData = {
+            amount: parseFloat(amountInput.value),
+            currency: currencySelect.value,
+            card_number: cardNumberInput.value.replace(/\s/g, ''),
+            expiry_date: expiryInput.value,
+            cvv: cvvInput.value,
+            cardholder_name: cardholderInput.value,
+            postal_code: postalCodeInput.value,
+            protocol: protocolSelect.value,
+            transaction_type: transactionTypeSelect.value,
+            auth_code: authCodeInput.value,
+            is_online: true
+        };
 
-    try {
-        const response = await fetch(API_ENDPOINT, {
+        console.log('Payment data:', paymentData);
+
+        // Send payment request to API
+        fetch('/api/payment', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify(paymentPayload),
+            body: JSON.stringify(paymentData)
+        })
+        .then(response => {
+            console.log('API response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Payment response:', data);
+
+            // Update UI with transaction result
+            displayTransactionResult(data);
+
+            // Add to transaction history
+            addTransactionToHistory(data);
+
+            // Store current transaction ID
+            terminalStatus.currentTransactionId = data.transaction_id;
+
+            // Enable receipt and void buttons
+            printBtn.disabled = false;
+            voidBtn.disabled = false;
+        })
+        .catch(error => {
+            console.error('Error processing payment:', error);
+            displayError('Payment processing failed. Please try again.');
+        })
+        .finally(() => {
+            // Reset button state
+            processBtn.disabled = false;
+            processBtn.textContent = 'Process Payment';
+        });
+    });
+
+    // Corrected `validateInputs` to be digits-only for all protocols
+    function validateInputs() {
+        console.log('Starting validation...');
+
+        // Check amount
+        if (!amountInput.value || parseFloat(amountInput.value) <= 0) {
+            displayError('Please enter a valid amount');
+            console.log('Amount validation failed');
+            return false;
+        }
+        console.log('Amount validation passed');
+
+        // Check card number
+        const cardNumber = cardNumberInput.value.replace(/\s/g, '');
+        if (cardNumber.length < 13 || cardNumber.length > 19) {
+            displayError('Please enter a valid card number');
+            console.log('Card number validation failed');
+            return false;
+        }
+        console.log('Card number validation passed');
+
+        // Check expiry date
+        const expiryPattern = /^(0[1-9]|1[0-2])\/([0-9]{2})$/;
+        if (!expiryPattern.test(expiryInput.value)) {
+            displayError('Please enter a valid expiry date (MM/YY)');
+            console.log('Expiry validation failed');
+            return false;
+        }
+        console.log('Expiry validation passed');
+
+        // Check CVV
+        if (!cvvInput.value || cvvInput.value.length < 3) {
+            displayError('Please enter a valid CVV');
+            console.log('CVV validation failed');
+            return false;
+        }
+        console.log('CVV validation passed');
+
+        // Check cardholder name
+        if (!cardholderInput.value || cardholderInput.value.trim().length === 0) {
+            displayError('Please enter the cardholder name');
+            console.log('Cardholder name validation failed');
+            return false;
+        }
+        console.log('Cardholder name validation passed');
+
+        // FIXED: Check auth code to be numeric and correct length for all protocols
+        const selectedProtocol = protocolSelect.value;
+        const protocolConfig = PROTOCOLS[selectedProtocol];
+
+        console.log('Checking auth code for protocol:', selectedProtocol);
+        console.log('Protocol config:', protocolConfig);
+        console.log('Auth code value:', authCodeInput.value);
+        console.log('Auth code length:', authCodeInput.value.length);
+
+        if (protocolConfig) {
+            const authCode = authCodeInput.value.trim();
+
+            // Check length
+            if (authCode.length !== protocolConfig.approval_length) {
+                displayError(`Please enter a valid ${protocolConfig.approval_length}-digit auth code`);
+                console.log(`Auth code length validation failed. Expected: ${protocolConfig.approval_length}, Got: ${authCode.length}`);
+                return false;
+            }
+            
+            // Always check if auth code is numeric
+            if (!/^\d+$/.test(authCode)) {
+                displayError('Auth code must be numeric for this protocol');
+                console.log('Auth code numeric validation failed');
+                return false;
+            }
+
+            console.log('Auth code validation passed');
+        } else {
+            console.log('No protocol config found, skipping auth code validation');
+        }
+
+        console.log('All validations passed!');
+        return true;
+    }
+
+    // Display transaction result
+    function displayTransactionResult(transaction) {
+        const statusClass = transaction.status === 'APPROVED' ? 'success' :
+                          transaction.status === 'DECLINED' ? 'danger' : 'warning';
+
+        const formattedAmount = new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: transaction.currency
+        }).format(transaction.amount);
+
+        const timestamp = new Date(transaction.timestamp).toLocaleString();
+
+        let resultHTML = `
+            <div class="transaction-status ${statusClass}">
+                <h3>${transaction.status}</h3>
+                <p class="transaction-amount">${formattedAmount}</p>
+                <p class="transaction-time">${timestamp}</p>
+            </div>
+            <div class="transaction-details">
+                <p><strong>Transaction ID:</strong> ${transaction.transaction_id}</p>
+                <p><strong>Auth Code:</strong> ${transaction.approval_code || 'N/A'}</p>
+        `;
+
+        if (transaction.response_code) {
+            resultHTML += `<p><strong>Response Code:</strong> ${transaction.response_code}</p>`;
+        }
+
+        if (transaction.response_message) {
+            resultHTML += `<p><strong>Message:</strong> ${transaction.response_message}</p>`;
+        }
+
+        resultHTML += '</div>';
+
+        resultContent.innerHTML = resultHTML;
+    }
+
+    // Display error message
+    function displayError(message) {
+        resultContent.innerHTML = `
+            <div class="transaction-status danger">
+                <h3>ERROR</h3>
+                <p>${message}</p>
+            </div>
+        `;
+    }
+
+    // Add transaction to history
+    function addTransactionToHistory(transaction) {
+        // Remove placeholder row if present
+        const placeholderRow = historyBody.querySelector('.placeholder-row');
+        if (placeholderRow) {
+            historyBody.removeChild(placeholderRow);
+        }
+
+        const formattedAmount = new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: transaction.currency
+        }).format(transaction.amount);
+
+        const timestamp = new Date(transaction.timestamp).toLocaleString();
+
+        const row = document.createElement('tr');
+        row.dataset.transactionId = transaction.transaction_id;
+
+        row.innerHTML = `
+            <td>${timestamp}</td>
+            <td>${transaction.transaction_type || 'SALE'}</td>
+            <td>${formattedAmount}</td>
+            <td class="${transaction.status.toLowerCase()}">${transaction.status}</td>
+            <td>
+                <button class="view-btn">View</button>
+                ${transaction.status === 'APPROVED' ? '<button class="void-btn">Void</button>' : ''}
+            </td>
+        `;
+
+        // Add to top of history
+        if (historyBody.firstChild) {
+            historyBody.insertBefore(row, historyBody.firstChild);
+        } else {
+            historyBody.appendChild(row);
+        }
+
+        // Add event listeners to buttons
+        const viewBtn = row.querySelector('.view-btn');
+        viewBtn.addEventListener('click', function() {
+            showReceipt(transaction);
         });
 
-        const result = await response.json();
-
-        if (response.ok && result.status === 'success') {
-            addMTI('0210', 'Authorization Response received (Approved)');
-            showTransactionResult(`Payment successful! Transaction ID: ${result.transactionId}`, 'success');
-            updateStatus('ONLINE');
-            currentTransaction = {
-                id: result.transactionId,
-                amount: amount,
-                type: 'Sale',
-                status: 'success',
-                time: new Date().toLocaleTimeString(),
-                date: new Date().toLocaleDateString(),
-                merchantId: footerMerchantId.textContent,
-                terminalId: footerTerminalId.textContent,
-                cardholder: cardholder,
-                last4: cardNumber.slice(-4),
-                protocol: protocol,
-            };
-            addTransactionToHistory(currentTransaction);
-            printButton.disabled = false;
-            voidButton.disabled = false;
-        } else {
-            addMTI('0210', 'Authorization Response received (Declined)');
-            showTransactionResult(`Payment failed: ${result.message}`, 'error');
-            updateStatus('ONLINE');
-            currentTransaction = {
-                id: result.transactionId || 'N/A',
-                amount: amount,
-                type: 'Sale',
-                status: 'failed',
-                time: new Date().toLocaleTimeString(),
-                date: new Date().toLocaleDateString(),
-                merchantId: footerMerchantId.textContent,
-                terminalId: footerTerminalId.textContent,
-                cardholder: cardholder,
-                last4: cardNumber.slice(-4),
-                protocol: protocol,
-            };
-            addTransactionToHistory(currentTransaction);
-            printButton.disabled = true;
-            voidButton.disabled = true;
+        const voidBtn = row.querySelector('.void-btn');
+        if (voidBtn) {
+            voidBtn.addEventListener('click', function() {
+                voidTransaction(transaction.transaction_id);
+            });
         }
-    } catch (error) {
-        console.error('Network Error:', error);
-        addMTI('0210', 'Authorization Response failed (Timeout)');
-        showTransactionResult('A network error occurred. Please try again.', 'error');
-        updateStatus('OFFLINE');
-    } finally {
-        processButton.disabled = false;
-        clearButton.disabled = false;
     }
-});
 
-/**
- * Handles the clear button click.
- */
-clearButton.addEventListener('click', () => {
-    amountInput.value = '';
-    document.getElementById('card-number').value = '';
-    document.getElementById('expiry').value = '';
-    document.getElementById('cvv').value = '';
-    document.getElementById('cardholder').value = '';
-    document.getElementById('protocol').value = '';
-    authCodeInput.value = '';
-    authCodeContainer.style.display = 'none';
-    showTransactionResult('Enter payment details to begin.', 'info');
-    printButton.disabled = true;
-    voidButton.disabled = true;
-});
-
-/**
- * Handles the protocol dropdown change event to show/hide the auth code field.
- */
-protocolSelect.addEventListener('change', () => {
-    const protocolValue = protocolSelect.value;
-    const requiredProtocols = ['101.1', '101.4', '101.7', '201.1', '201.3', '201.5'];
-    if (requiredProtocols.includes(protocolValue)) {
-        authCodeContainer.style.display = 'block';
-        if (protocolValue === '101.1' || protocolValue === '101.7') {
-            authCodeInput.placeholder = '4-digit code';
-            authCodeInput.setAttribute('maxlength', '4');
-        } else {
-            authCodeInput.placeholder = '6-digit code';
-            authCodeInput.setAttribute('maxlength', '6');
-        }
-    } else {
-        authCodeContainer.style.display = 'none';
+    // Clear form
+    clearBtn.addEventListener('click', function() {
+        amountInput.value = '';
+        cardNumberInput.value = '';
+        expiryInput.value = '';
+        cvvInput.value = '';
+        cardholderInput.value = '';
+        postalCodeInput.value = '';
         authCodeInput.value = '';
-    }
-});
 
-/**
- * Handles the payout tabs click event.
- */
-payoutTabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-        payoutTabs.forEach(t => t.classList.remove('active'));
-        payoutContents.forEach(c => c.classList.remove('active'));
-        payoutContents.forEach(c => c.classList.add('hidden'));
+        // Reset auth code field styling
+        authCodeInput.style.borderColor = '';
+        authCodeInput.style.backgroundColor = '';
 
-        tab.classList.add('active');
-        const contentClass = tab.textContent.toLowerCase().replace(' ', '-') + '-content';
-        const correspondingContent = document.querySelector(`.${contentClass}`);
-        correspondingContent.classList.remove('hidden');
-        correspondingContent.classList.add('active');
+        // Reset result content
+        resultContent.innerHTML = '<p class="placeholder-text">Transaction results will appear here</p>';
+
+        // Disable receipt and void buttons
+        printBtn.disabled = true;
+        voidBtn.disabled = true;
+
+        // Clear current transaction ID
+        terminalStatus.currentTransactionId = null;
     });
-});
 
-/**
- * Handles saving bank details and triggers a payout confirmation.
- */
-saveBankButton.addEventListener('click', () => {
-    const bankDetails = {
-        bankName: document.getElementById('bank-name').value,
-        accountName: document.getElementById('account-name').value,
-        accountNumber: document.getElementById('account-number').value,
-        routingNumber: document.getElementById('routing-number').value
-    };
-    console.log('Saving Bank Details:', bankDetails);
-    
-    setTimeout(() => {
-        addMTI('0220', 'Payout trigger sent for Bank Transfer');
-        setTimeout(() => {
-            addMTI('0230', 'Payout Confirmation received for Bank Transfer');
-            alert('Bank details saved and payout confirmed successfully!');
-        }, 3000);
-    }, 1000);
-});
+    // Print receipt
+    printBtn.addEventListener('click', function() {
+        if (terminalStatus.currentTransactionId) {
+            fetch(`/api/transaction/${terminalStatus.currentTransactionId}`)
+                .then(response => response.json())
+                .then(transaction => {
+                    showReceipt(transaction);
+                })
+                .catch(error => {
+                    console.error('Error fetching transaction:', error);
+                });
+        }
+    });
 
-/**
- * Handles saving crypto details and triggers a payout confirmation.
- */
-saveCryptoButton.addEventListener('click', () => {
-    const cryptoDetails = {
-        currency: document.getElementById('crypto-currency').value,
-        walletAddress: document.getElementById('wallet-address').value
-    };
-    console.log('Saving Crypto Details:', cryptoDetails);
+    // Show receipt modal
+    function showReceipt(transaction) {
+        const formattedAmount = new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: transaction.currency
+        }).format(transaction.amount);
 
-    setTimeout(() => {
-        addMTI('0220', 'Payout trigger sent for Crypto Transfer');
-        setTimeout(() => {
-            addMTI('0230', 'Payout Confirmation received for Crypto Transfer');
-            alert('Crypto details saved and payout confirmed successfully!');
-        }, 3000);
-    }, 1000);
-});
+        const timestamp = new Date(transaction.timestamp).toLocaleString();
 
-/**
- * Handles showing the receipt modal.
- */
-printButton.addEventListener('click', () => {
-    if (currentTransaction) {
-        showReceipt(currentTransaction);
+        let receiptHTML = `
+            BLACK ROCK PAYMENT TERMINAL
+            ===========================
+
+            MERCHANT ID: ${terminalStatus.merchantId || 'DEFAULT_MERCHANT'}
+            TERMINAL ID: ${terminalStatus.terminalId || 'DEFAULT_TERMINAL'}
+
+            DATE: ${timestamp}
+
+            TRANSACTION TYPE: ${transaction.transaction_type || 'SALE'}
+            AMOUNT: ${formattedAmount}
+
+            STATUS: ${transaction.status}
+            AUTH CODE: ${transaction.approval_code || 'N/A'}
+
+            TRANSACTION ID: ${transaction.transaction_id}
+
+            ===========================
+
+            Thank you for your business!
+        `;
+
+        receiptContainer.textContent = receiptHTML;
+        receiptModal.style.display = 'block';
     }
-});
 
-/**
- * Handles closing the receipt modal.
- */
-closeModalButtons.forEach(button => {
-    button.addEventListener('click', () => {
+    // Close receipt modal
+    closeModalBtn.addEventListener('click', function() {
         receiptModal.style.display = 'none';
     });
-});
 
-/**
- * Handles the 'Print' button inside the receipt modal (simulated).
- */
-printReceiptButton.addEventListener('click', () => {
-    window.print();
-});
+    closeReceiptBtn.addEventListener('click', function() {
+        receiptModal.style.display = 'none';
+    });
 
-/**
- * Handles the 'Void Transaction' button (simulated).
- */
-voidButton.addEventListener('click', () => {
-    if (currentTransaction && currentTransaction.status === 'success') {
-        console.log(`Attempting to void transaction ID: ${currentTransaction.id}`);
-        addMTI('0420', 'Reversal Request sent...');
-        
-        setTimeout(() => {
-            currentTransaction.status = 'failed';
-            currentTransaction.type = 'Void';
-            showTransactionResult(`Transaction ${currentTransaction.id} voided successfully.`, 'info');
-            updateStatus('ONLINE');
-            printButton.disabled = true;
-            voidButton.disabled = true;
-            addMTI('0430', 'Reversal Response received (Approved)');
-            alert(`Transaction ${currentTransaction.id} has been voided.`);
-        }, 2000);
-    }
-});
+    // Print receipt
+    printReceiptBtn.addEventListener('click', function() {
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Receipt</title>
+                    <style>
+                        body {
+                            font-family: 'Courier New', monospace;
+                            white-space: pre-wrap;
+                            padding: 20px;
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${receiptContainer.textContent}
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+    });
 
-// Event delegation for dynamically added history table buttons
-historyBody.addEventListener('click', (event) => {
-    const target = event.target;
-    const row = target.closest('tr');
-    if (!row) return;
-
-    const transactionId = row.querySelector('td:nth-child(1)').textContent;
-
-    if (target.classList.contains('view-receipt-btn')) {
-        const transaction = transactionHistory.find(t => t.id === transactionId);
-        if (transaction) {
-            showReceipt(transaction);
+    // Void transaction
+    voidBtn.addEventListener('click', function() {
+        if (terminalStatus.currentTransactionId) {
+            voidTransaction(terminalStatus.currentTransactionId);
         }
-    } else if (target.classList.contains('void-transaction-btn')) {
-        const transaction = transactionHistory.find(t => t.id === transactionId);
-        if (transaction) {
-            transaction.status = 'failed';
-            alert(`Transaction ${transaction.id} has been voided.`);
-            row.querySelector('.status-dot').classList.remove('success');
-            row.querySelector('.status-dot').classList.add('failed');
-            row.querySelector('td:nth-child(4)').innerHTML = `<span class="status-dot failed"></span>Failed`;
-            target.remove();
+    });
+
+    function voidTransaction(transactionId) {
+        if (confirm('Are you sure you want to void this transaction?')) {
+            fetch(`/api/transaction/${transactionId}/void`, {
+                method: 'POST'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Update UI with void result
+                displayTransactionResult(data);
+
+                // Update transaction in history
+                updateTransactionInHistory(data);
+
+                // Disable void button if current transaction
+                if (transactionId === terminalStatus.currentTransactionId) {
+                    voidBtn.disabled = true;
+                }
+            })
+            .catch(error => {
+                console.error('Error voiding transaction:', error);
+                displayError('Failed to void transaction. Please try again.');
+            });
         }
     }
+
+    // Update transaction in history
+    function updateTransactionInHistory(transaction) {
+        const row = historyBody.querySelector(`tr[data-transaction-id="${transaction.transaction_id}"]`);
+        if (row) {
+            const statusCell = row.querySelector('td:nth-child(4)');
+            const actionsCell = row.querySelector('td:nth-child(5)');
+
+            statusCell.textContent = transaction.status;
+            statusCell.className = transaction.status.toLowerCase();
+
+            // Remove void button
+            const voidBtn = actionsCell.querySelector('.void-btn');
+            if (voidBtn) {
+                actionsCell.removeChild(voidBtn);
+            }
+        }
+    }
+
+    // Initialize terminal
+    function initializeTerminal() {
+        // Fetch terminal info
+        fetch('/api/terminal/info')
+            .then(response => response.json())
+            .then(data => {
+                terminalStatus.merchantId = data.merchant_id;
+                terminalStatus.terminalId = data.terminal_id;
+
+                terminalIdEl.textContent = data.terminal_id;
+                merchantIdEl.textContent = data.merchant_id;
+            })
+            .catch(error => {
+                console.error('Error fetching terminal info:', error);
+
+                // Set default values
+                terminalIdEl.textContent = 'DEFAULT_TERMINAL';
+                merchantIdEl.textContent = 'DEFAULT_MERCHANT';
+            });
+
+        // Fetch transaction history
+        fetch('/api/transactions')
+            .then(response => response.json())
+            .then(data => {
+                if (data.transactions && data.transactions.length > 0) {
+                    // Clear placeholder
+                    historyBody.innerHTML = '';
+
+                    // Add transactions to history
+                    data.transactions.forEach(transaction => {
+                        addTransactionToHistory(transaction);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching transaction history:', error);
+            });
+
+        // Fetch protocols
+        fetch('/api/protocols')
+            .then(response => response.json())
+            .then(data => {
+                if (data.protocols && data.protocols.length > 0) {
+                    // Update protocol select
+                    protocolSelect.innerHTML = '';
+
+                    data.protocols.forEach(protocol => {
+                        const option = document.createElement('option');
+                        option.value = protocol.name;
+                        option.textContent = protocol.name;
+                        protocolSelect.appendChild(option);
+                    });
+
+                    // Update auth code requirements
+                    updateAuthCodeRequirements();
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching protocols:', error);
+            });
+    }
+
+    // Payout settings tabs
+    payoutTabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            // Remove active class from all tabs
+            payoutTabs.forEach(t => t.classList.remove('active'));
+
+            // Add active class to clicked tab
+            this.classList.add('active');
+
+            // Hide all content
+            payoutContents.forEach(content => content.classList.remove('active'));
+
+            // Show selected content
+            const tabId = this.dataset.tab;
+            document.getElementById(`${tabId}-payout`).classList.add('active');
+        });
+    });
+
+    // Save bank payout settings
+    saveBankBtn.addEventListener('click', function() {
+        const bankName = document.getElementById('bank-name').value;
+        const accountName = document.getElementById('account-name').value;
+        const accountNumber = document.getElementById('account-number').value;
+        const routingNumber = document.getElementById('routing-number').value;
+        const swiftCode = document.getElementById('swift-code').value;
+        const iban = document.getElementById('iban').value;
+
+        // Validate inputs
+        if (!bankName || !accountName || !accountNumber || !routingNumber) {
+            alert('Please fill in all required bank details');
+            return;
+        }
+
+        const payoutData = {
+            method: 'BANK',
+            settings: {
+                account_name: accountName,
+                account_number: accountNumber,
+                routing_number: routingNumber,
+                bank_name: bankName,
+                swift_code: swiftCode || null,
+                iban: iban || null
+            }
+        };
+
+        // Send payout settings to API
+        fetch('/api/payout/settings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payoutData)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            alert('Bank payout settings saved successfully');
+        })
+        .catch(error => {
+            console.error('Error saving bank payout settings:', error);
+            alert('Failed to save bank payout settings. Please try again.');
+        });
+    });
+
+    // Save crypto payout settings
+    saveCryptoBtn.addEventListener('click', function() {
+        const cryptoCurrency = document.getElementById('crypto-currency').value;
+        const walletAddress = document.getElementById('wallet-address').value;
+        const network = document.getElementById('network').value;
+
+        // Validate inputs
+        if (!cryptoCurrency || !walletAddress) {
+            alert('Please fill in all required crypto details');
+            return;
+        }
+
+        const payoutData = {
+            method: 'CRYPTO',
+            settings: {
+                wallet_address: walletAddress,
+                currency: cryptoCurrency,
+                network: network || null
+            }
+        };
+
+        // Send payout settings to API
+        fetch('/api/payout/settings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payoutData)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            alert('Crypto payout settings saved successfully');
+        })
+        .catch(error => {
+            console.error('Error saving crypto payout settings:', error);
+            alert('Failed to save crypto payout settings. Please try again.');
+        });
+    });
+
+    // Check connection status
+    function checkConnectionStatus() {
+        fetch('/api/status')
+            .then(response => {
+                if (response.ok) {
+                    updateConnectionStatus(true);
+                } else {
+                    updateConnectionStatus(false);
+                }
+            })
+            .catch(() => {
+                updateConnectionStatus(false);
+            });
+    }
+
+    function updateConnectionStatus(isOnline) {
+        terminalStatus.online = isOnline;
+
+        if (isOnline) {
+            statusText.textContent = 'ONLINE';
+            statusLight.className = 'status-light online';
+        } else {
+            statusText.textContent = 'OFFLINE';
+            statusLight.className = 'status-light offline';
+        }
+    }
+
+    // Initialize
+    initializeTerminal();
+
+    // Check connection status periodically
+    setInterval(checkConnectionStatus, 30000);
+
+    // Initial connection check
+    checkConnectionStatus();
+
+    // Close modal when clicking outside
+    window.addEventListener('click', function(event) {
+        if (event.target === receiptModal) {
+            receiptModal.style.display = 'none';
+        }
+    });
 });
